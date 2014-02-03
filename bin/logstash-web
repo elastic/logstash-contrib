@@ -1,0 +1,4 @@
+#!/bin/sh
+
+basedir=$(cd `dirname $0`/..; pwd)
+exec $basedir/bin/logstash web "$@"

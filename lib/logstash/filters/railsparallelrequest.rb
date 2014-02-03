@@ -8,6 +8,8 @@ require "logstash/filters/base"
 require "logstash/namespace"
 require "set"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 class LogStash::Filters::Railsparallelrequest < LogStash::Filters::Base
 
   config_name "railsparallelrequest"

@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # INFORMATION:
 # The filter Advisor is designed for capture and confrontation the events. 
 # The events must be grep by a filter first, then it can pull out a copy of it, like clone, whit tags "advisor_first",

@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # Collate events by time or count.
 #
 # The original goal of this filter was to merge the logs from different sources

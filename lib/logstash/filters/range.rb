@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # This filter is used to check that certain fields are within expected size/length ranges.
 # Supported types are numbers and strings.
 # Numbers are checked to be within numeric value range.

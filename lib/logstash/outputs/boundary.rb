@@ -2,6 +2,8 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 class LogStash::Outputs::Boundary < LogStash::Outputs::Base
   # This output lets you send annotations to
   # Boundary based on Logstash events

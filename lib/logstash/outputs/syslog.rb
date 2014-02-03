@@ -3,6 +3,8 @@ require "logstash/outputs/base"
 require "logstash/namespace"
 require "date"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Send events to a syslog server.
 #
 # You can send messages compliant with RFC3164 or RFC5424

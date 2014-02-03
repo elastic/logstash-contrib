@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # The GELFify filter parses RFC3164 severity levels to
 # corresponding GELF levels.
 class LogStash::Filters::Gelfify < LogStash::Filters::Base

@@ -2,6 +2,8 @@
 require "logstash/inputs/base"
 require "logstash/namespace"
 
+# This input plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Stream events from a heroku app's logs.
 #
 # This will read events in a manner similar to how the `heroku logs -t` command

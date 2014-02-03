@@ -3,6 +3,8 @@ require "logstash/filters/base"
 require "logstash/namespace"
 require "ipaddr"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # The CIDR filter is for checking IP addresses in events against a list of
 # network blocks that might contain it. Multiple addresses can be checked
 # against multiple networks, any match succeeds. Upon success additional tags

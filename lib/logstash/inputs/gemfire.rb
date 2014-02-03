@@ -2,6 +2,8 @@
 require "logstash/inputs/threadable"
 require "logstash/namespace"
 
+# This input plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Push events to a GemFire region.
 #
 # GemFire is an object database.

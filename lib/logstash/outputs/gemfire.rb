@@ -2,6 +2,8 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Push events to a GemFire region.
 #
 # GemFire is an object database.

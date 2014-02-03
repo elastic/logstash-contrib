@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # The prune filter is for pruning event data from @fileds based on whitelist/blacklist
 # of field names or their values (names and values can also be regular expressions).
 

@@ -3,6 +3,8 @@ require 'logstash/namespace'
 require 'logstash/filters/base'
 
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # This filter automatically extracts all numbers found inside a string
 #
 # This is useful when you have lines that don't match a grok pattern
