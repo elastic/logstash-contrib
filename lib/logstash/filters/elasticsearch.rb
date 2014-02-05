@@ -2,6 +2,8 @@ require "logstash/filters/base"
 require "logstash/namespace"
 require "logstash/util/fieldreference"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # Search elasticsearch for a previous log event and copy some fields from it
 # into the current event.  Below is a complete example of how this filter might
 # be used.  Whenever logstash receives an "end" event, it uses this elasticsearch

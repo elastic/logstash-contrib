@@ -6,6 +6,8 @@ require "uri"
 require "net/http"
 require "net/https"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Ugly monkey patch to get around <http://jira.codehaus.org/browse/JRUBY-5529>
 Net::BufferedIO.class_eval do
     BUFSIZE = 1024 * 16

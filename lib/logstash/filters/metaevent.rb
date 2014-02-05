@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 class LogStash::Filters::Metaevent < LogStash::Filters::Base
   config_name "metaevent"
   milestone 1

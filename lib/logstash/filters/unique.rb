@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 class LogStash::Filters::Unique < LogStash::Filters::Base
 
   config_name "unique"

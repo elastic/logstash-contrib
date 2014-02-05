@@ -2,6 +2,8 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Riak is a distributed k/v store from Basho.
 # It's based on the Dynamo model.
 

@@ -1,3 +1,5 @@
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # encoding: utf-8
 # Author: Rodrigo De Castro <rdc@google.com>
 # Date: 2013-09-20

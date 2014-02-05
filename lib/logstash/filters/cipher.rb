@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # This filter parses a source and apply a cipher or decipher before
 # storing it in the target.
 #

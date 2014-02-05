@@ -2,6 +2,8 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Riemann is a network event stream processing system.
 #
 # While Riemann is very similar conceptually to Logstash, it has

@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # Strip everything but punctuation from a field and store the remainder in the
 # a separate field. This is often used for fingerprinting log events.
 class LogStash::Filters::Punct < LogStash::Filters::Base

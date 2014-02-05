@@ -3,6 +3,8 @@ require "logstash/outputs/base"
 require "logstash/namespace"
 require "json"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # This output ships metrics to MetricCatcher, allowing you to
 # utilize Coda Hale's Metrics.
 #

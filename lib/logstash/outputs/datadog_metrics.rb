@@ -3,6 +3,8 @@ require "logstash/outputs/base"
 require "logstash/namespace"
 require "stud/buffer"
 
+# This output plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # This output lets you send metrics to
 # DataDogHQ based on Logstash events.
 

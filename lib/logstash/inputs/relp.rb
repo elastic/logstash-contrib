@@ -5,6 +5,8 @@ require "logstash/util/relp"
 require "logstash/util/socket_peer"
 
 
+# This input plugin requires the logstash-contrib package, available at LSCONTRIB
+
 # Read RELP events over a TCP socket.
 #
 # For more information about RELP, see 

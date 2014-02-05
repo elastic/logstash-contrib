@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+# This filter requires the logstash-contrib package, available at LSCONTRIB
+
 # JSON encode filter. Takes a field and serializes it into JSON
 #
 # If no target is specified, the source field is overwritten with the JSON
