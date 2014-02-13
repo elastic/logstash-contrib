@@ -2,7 +2,6 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # INFORMATION:
 # The filter Advisor is designed for capture and confrontation the events. 

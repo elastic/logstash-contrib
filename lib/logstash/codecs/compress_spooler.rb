@@ -1,7 +1,6 @@
 # encoding: utf-8
 require "logstash/codecs/base"
 
-# This codec requires the logstash-contrib package, available at LSCONTRIB
 class LogStash::Codecs::CompressSpooler < LogStash::Codecs::Base
   config_name 'compress_spooler'
   milestone 1

@@ -2,7 +2,6 @@
 require "logstash/namespace"
 require "logstash/outputs/base"
 
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # This output runs a websocket server and publishes any 
 # messages to all connected websocket clients.

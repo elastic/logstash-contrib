@@ -2,7 +2,6 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # Set fields from environment variables
 class LogStash::Filters::Environment < LogStash::Filters::Base

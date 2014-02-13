@@ -5,7 +5,6 @@ require "stud/buffer"
 require "rubygems"
 require "uuidtools"
 
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # This output lets you index&store your logs in Solr. If you want to get
 # started quickly you should use version 4.4 or above in schemaless mode,

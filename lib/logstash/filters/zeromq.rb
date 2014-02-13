@@ -2,7 +2,6 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # ZeroMQ filter. This is the best way to send an event externally for filtering
 # It works much like an exec filter would by sending the event "offsite"

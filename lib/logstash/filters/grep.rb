@@ -2,7 +2,6 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # Grep filter. Useful for dropping events you don't want to pass, or
 # adding tags or fields to events that match.

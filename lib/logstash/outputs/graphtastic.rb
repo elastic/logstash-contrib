@@ -2,7 +2,6 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # A plugin for a newly developed Java/Spring Metrics application
 # I didn't really want to code this project but I couldn't find

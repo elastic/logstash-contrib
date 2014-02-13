@@ -2,7 +2,6 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # JSON filter. Takes a field that contains JSON and expands it into
 # an actual datastructure.

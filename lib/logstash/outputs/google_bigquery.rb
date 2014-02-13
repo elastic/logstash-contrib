@@ -1,4 +1,3 @@
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # Author: Rodrigo De Castro <rdc@google.com>
 # Date: 2013-09-20

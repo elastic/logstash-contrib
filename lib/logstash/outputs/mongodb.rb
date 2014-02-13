@@ -2,7 +2,6 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
 

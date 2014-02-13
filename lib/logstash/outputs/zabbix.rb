@@ -2,7 +2,6 @@
 require "logstash/namespace"
 require "logstash/outputs/base"
  
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # The zabbix output is used for sending item data to zabbix via the
 # zabbix_sender executable.

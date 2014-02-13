@@ -3,7 +3,6 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "socket"
 
-# This input plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # Read rows from an sqlite database.
 #

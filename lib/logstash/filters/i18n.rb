@@ -3,7 +3,6 @@ require "i18n"
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # The i18n filter allows you to remove special characters from
 # from a field

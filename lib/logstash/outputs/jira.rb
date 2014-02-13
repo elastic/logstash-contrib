@@ -10,7 +10,6 @@
 require "logstash/outputs/base"
 require "logstash/namespace"
 
-# This output plugin requires the logstash-contrib package, available at LSCONTRIB
 
 #
 # This is so is most useful so you can use logstash to parse and structure

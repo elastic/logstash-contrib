@@ -3,7 +3,6 @@ require "date"
 require "logstash/inputs/rabbitmq"
 require "zlib"
 
-# This input plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # Read Zenoss events from the zenoss.zenevents fanout exchange.
 #

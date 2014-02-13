@@ -7,7 +7,6 @@ require "logstash/filters/base"
 require "logstash/namespace"
 require 'thread'
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # The elapsed filter tracks a pair of start/end events and uses their
 # timestamps to calculate the elapsed time between them.

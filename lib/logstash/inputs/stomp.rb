@@ -3,7 +3,6 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require 'pp'
 
-# This input plugin requires the logstash-contrib package, available at LSCONTRIB
 
 class LogStash::Inputs::Stomp < LogStash::Inputs::Base
   config_name "stomp"

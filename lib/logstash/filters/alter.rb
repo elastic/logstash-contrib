@@ -2,7 +2,6 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # The alter filter allows you to do general alterations to fields 
 # that are not included in the normal mutate filter. 

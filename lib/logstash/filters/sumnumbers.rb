@@ -2,7 +2,6 @@ require 'logstash/namespace'
 require 'logstash/filters/base'
 
 
-# This filter requires the logstash-contrib package, available at LSCONTRIB
 
 # This filter automatically sum all numbers found inside a string
 #

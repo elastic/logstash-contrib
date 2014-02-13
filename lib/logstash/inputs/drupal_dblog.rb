@@ -3,7 +3,6 @@ require "date"
 require "logstash/inputs/base"
 require "logstash/namespace"
 
-# This input plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # Retrieve watchdog log events from a Drupal installation with DBLog enabled.
 # The events are pulled out directly from the database.

@@ -3,7 +3,6 @@ require "logstash/inputs/threadable"
 require "logstash/namespace"
 require "socket" # for Socket.gethostname
 
-# This input plugin requires the logstash-contrib package, available at LSCONTRIB
 
 # Read from varnish cache's shared memory log
 class LogStash::Inputs::Varnishlog < LogStash::Inputs::Threadable
