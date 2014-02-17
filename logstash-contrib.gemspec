@@ -33,8 +33,10 @@ Gem::Specification.new do |gem|
 
   if RUBY_PLATFORM == 'java'
     gem.platform = RUBY_PLATFORM
+    gem.add_runtime_dependency "geoscript", "0.1.0.pre"           #(MIT license)
     gem.add_runtime_dependency "jruby-win32ole"                   #(unknown license)
     gem.add_runtime_dependency "jdbc-mysql"                       # For input drupal_dblog (BSD license)
+
   else
     gem.add_runtime_dependency "mysql2"   # For input drupal_dblog (MIT license)
   end
