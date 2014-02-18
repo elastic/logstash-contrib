@@ -103,7 +103,7 @@ class LogStash::Filters::Wmts < LogStash::Filters::Base
   public
   def register
     require "geoscript"
- end
+  end
 
   public
   def filter(event)

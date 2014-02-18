@@ -48,7 +48,7 @@ class LogStash::Filters::Wms < LogStash::Filters::Base
   def register
     require "geoscript"
     require "uri"
- end
+  end
 
   public
   def filter(event)
