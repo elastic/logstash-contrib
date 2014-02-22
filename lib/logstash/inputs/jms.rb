@@ -8,7 +8,7 @@ require "logstash/namespace"
 # For more information about Jms, see <http://docs.oracle.com/javaee/6/tutorial/doc/bncdq.html>
 # For more information about the Ruby Gem used, see <http://github.com/reidmorrison/jruby-jms>
 # Here is a config example :
-#   jms { 
+#   jms {
 #      include_header => false
 #      include_properties => false
 #      include_body => true
@@ -29,7 +29,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
   #   Message Properties (optional)
   #   Message Bodies (optional)
   # You can tell the input plugin which parts should be included in the event produced by Logstash
-  # 
+  #
   # Include JMS Message Header Field values in the event
   config :include_header, :validate => :boolean, :default => true
   # Include JMS Message Properties Field values in the event
@@ -46,28 +46,28 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
 
   # Choose an implementation of the run block. Value can be either consumer, async or thread
   config :runner, :validate => :string, :required => true, :default => "consumer"
- 
+
   # Initial connection timeout in seconds.
   config :timeout, :validate => :number, :default => 1000
 
-  # Polling interval. 
+  # Polling interval.
   # This is the time sleeping between asks to a consumed Queue.
   # This parameter has non influence in the case of a subcribed Topic.
   config :interval, :validate => :number, :default => 10
 
   # Name of the Queue to consume.
   # Mandatory unless :topic_name is supplied
-  config :queue_name, :validate => :string, :required => true
+  config :queue_name, :validate => :string
   # Name of the Topic to subscribe to.
   # Mandatory unless :queue_name is supplied
-  config :topic_name, :validate => :string, :required => true
+  config :topic_name, :validate => :string
 
   # Yaml config file
   config :yaml_file, :validate => :string
   # Yaml config file section name
   # For some known examples, see: [Example jms.yml](https://github.com/reidmorrison/jruby-jms/blob/master/examples/jms.yml)
   config :yaml_section, :validate => :string
-  
+
 
 
   # TODO(claveau): here is the the problem to deal with ...
@@ -91,7 +91,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
   config :password, :validate => :string
   # Url to use when connecting to the JMS provider
   config :broker_url, :validate => :string
-  
+
   # Name of JNDI entry at which the Factory can be found
   config :jndi_name, :validate => :string
   # Mandatory if jndi lookup is being used,
@@ -100,12 +100,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
 
   # :yaml_file, :factory and :jndi_name are mutually exclusive, both cannot be supplied at the
   # same time. The priority order is :yaml_file, then :jndi_name, then :factory
-  # 
+  #
   # JMS Provider specific properties can be set if the JMS Factory itself
   # has setters for those properties.
   #
   # For some known examples, see: [Example jms.yml](https://github.com/reidmorrison/jruby-jms/blob/master/examples/jms.yml)
-        
+
   public
   def register
     require "jms"
@@ -114,22 +114,22 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
     if @yaml_file
       @jms_config = YAML.load_file(@yaml_file)[@yaml_section]
 
-    # TODO(claveau): causes an exception 
+    # TODO(claveau): causes an exception
     # #<TypeError: can't dup NilClass> in /jms/connection.rb:172 (params.dup)
     elsif @jndi_name = {
         :require_jars => @require_jars,
-        :jndi_name => @jndi_name, 
+        :jndi_name => @jndi_name,
         :jndi_context => @jndi_context}
 
     elsif @factory
       @jms_config = {
         :require_jars => @require_jars,
-        :factory => @factory, 
+        :factory => @factory,
         :username => @username,
         :password => @password,
         :broker_url => @broker_url,
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
-        } 
+        }
     end
 
     @logger.debug @jms_config
@@ -147,12 +147,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
 
         # Here, we can use the JMS Enqueue timestamp as the @timestamp
         # TODO(claveau): investigate the reason why the Java integer Timestamp conversion is erroneous
-        # For example : 
+        # For example :
         #   when the Enqueue real time is "2014-02-12T11:20:58+01:00"
         #   we receive a msg.jms_timestamp => 1392200458000
         #   then the conversion ::Time.at(msg.jms_timestamp) => "46087-01-28T06:26:40.000+01:00"
         if @use_jms_timestamp and msg.jms_timestamp
-          event.timestamp = ::Time.at(msg.jms_timestamp)          
+          event.timestamp = ::Time.at(msg.jms_timestamp)
         end
 
         if @include_header
@@ -203,7 +203,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
       while(true)
         session.consume(:queue_name => @queue_name, :timeout=>@timeout) do |message|
           queue_event message, output_queue
-        end 
+        end
       sleep @interval
       end
     end
