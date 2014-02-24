@@ -26,8 +26,8 @@ endif
 #spec/outputs/graphite.rb spec/outputs/email.rb)
 default:
 	@echo "Make targets you might be interested in:"
-	@echo "  flatjar -- builds the flatjar jar"
-	@echo "  flatjar-test -- runs the test suite against the flatjar"
+	@echo "  tarball -- builds the tarball"
+	@echo "  tarball-test -- runs the test suite against the tarball"
 
 TESTS=$(wildcard spec/inputs/*.rb spec/support/*.rb spec/filters/*.rb spec/examples/*.rb spec/codecs/*.rb spec/conditionals/*.rb spec/event.rb spec/jar.rb)
 
@@ -146,7 +146,7 @@ show:
 	echo $(VERSION)
 
 .PHONY: prepare-tarball
-prepare-tarball tarball zip: WORKDIR=build/tarball/logstash-$(VERSION)
+prepare-tarball tarball zip: WORKDIR=build/tarball/logstash-contrib-$(VERSION)
 prepare-tarball: vendor-gems
 prepare-tarball:
 	@echo "=> Preparing tarball"
