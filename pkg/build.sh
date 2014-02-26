@@ -49,9 +49,9 @@ CURL=$(which curl 2>/dev/null)
 URLSTUB="http://download.elasticsearch.org/logstash/logstash/"
 
 if [ "x$WGET" != "x" ]; then
-  DOWNLOAD_COMMAND="wget -q --no-check-certificate -O"
+  DOWNLOAD_COMMAND="wget -q -O"
 elif [ "x$CURL" != "x" ]; then
-    DOWNLOAD_COMMAND="curl -s -L -k -o"
+    DOWNLOAD_COMMAND="curl -s -L -o"
 else
   echo "wget or curl are required."
   exit 1
