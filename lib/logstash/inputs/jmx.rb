@@ -1,8 +1,7 @@
 # Permits to retrieve metrics from jmx.
 class LogStash::Inputs::Jmx < LogStash::Inputs::Base
-  # TODO add documentation
   config_name 'jmx'
-  milestone 1
+  milestone 2
 
   #Class Var
   attr_accessor :regexp_group_alias_object
@@ -33,7 +32,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
   def check_conf(conf_hash,file_conf)
     #Check required parameters
     @logger.debug("Check that required parameters are define with good types in #{conf_hash}")
-    parameter = {'host' => 'String'.class, 'port' => 1.class, 'queries' => [].class}
+    parameter = {'host' => String, 'port' => Fixnum, 'queries' => Array}
     parameter.each_key do |param|
       if conf_hash.has_key?(param)
         unless conf_hash[param].instance_of?(parameter[param])
@@ -47,7 +46,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
     end
 
     @logger.debug('Check optional parameters types')
-    parameter = {'alias' => 'String'.class}
+    parameter = {'alias' => String}
     parameter.each_key do |param|
       if conf_hash.has_key?(param)
         unless conf_hash[param].instance_of?(parameter[param])
@@ -58,7 +57,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
     end
 
     @logger.debug('Check that required parameters are define with good types for queries')
-    parameter = {'object_name' => 'String'.class}
+    parameter = {'object_name' => String}
     parameter.each_key do |param|
       conf_hash['queries'].each do |query|
         if query.has_key?(param)
@@ -74,7 +73,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
     end
 
     @logger.debug('Check optional parameters types for queries')
-    parameter = {'object_alias' => 'String'.class, 'attributes' => [].class}
+    parameter = {'object_alias' => String, 'attributes' => Array}
     parameter.each_key do |param|
       conf_hash['queries'].each do |query|
         if query.has_key?(param)
@@ -160,58 +159,58 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
         end
 
 
-        @logger.debug("Treat queries #{thread_hash_conf['queries']}")
+        @logger.debug("Treat queries #{thread_hash_conf['queries']}", :base_metric_path => "#{base_metric_path}")
         thread_hash_conf['queries'].each do |query|
-          @logger.debug("Find all objects name #{query['object_name']}")
+          @logger.debug("Find all objects name #{query['object_name']}", :base_metric_path => "#{base_metric_path}")
           jmx_object_name_s = JMX::MBean.find_all_by_name(query['object_name'], :connection => jmx_connection)
 
           if jmx_object_name_s.length > 0
             jmx_object_name_s.each do |jmx_object_name|
               if query.has_key?('object_alias')
                 object_name = replace_alias_object(query['object_alias'],jmx_object_name.object_name.to_s)
-                @logger.debug("Set object_name to object_alias: #{object_name}")
+                @logger.debug("Set object_name to object_alias: #{object_name}", :base_metric_path => "#{base_metric_path}")
               else
                 object_name = jmx_object_name.object_name.to_s
-                @logger.debug("Set object_name to jmx object_name: #{object_name}")
+                @logger.debug("Set object_name to jmx object_name: #{object_name}", :base_metric_path => "#{base_metric_path}")
               end
 
               if query.has_key?('attributes')
-                @logger.debug("Retrieves attributes #{query['attributes']} to #{jmx_object_name.object_name}")
+                @logger.debug("Retrieves attributes #{query['attributes']} to #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                 query['attributes'].each do |attribute|
                   begin
                     jmx_attribute_value = jmx_object_name.send(attribute.snake_case)
                     if jmx_attribute_value.instance_of? Java::JavaxManagementOpenmbean::CompositeDataSupport
-                      @logger.debug('The jmx value is a composite_data one')
+                      @logger.debug('The jmx value is a composite_data one', :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                       jmx_attribute_value.each do |jmx_attribute_value_composite|
-                        @logger.debug("Get jmx value #{jmx_attribute_value[jmx_attribute_value_composite]} for attribute #{attribute}.#{jmx_attribute_value_composite} to #{jmx_object_name.object_name}")
+                        @logger.debug("Get jmx value #{jmx_attribute_value[jmx_attribute_value_composite]} for attribute #{attribute}.#{jmx_attribute_value_composite} to #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                         send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{attribute}.#{jmx_attribute_value_composite}", jmx_attribute_value[jmx_attribute_value_composite])
                       end
                     else
-                      @logger.debug("Get jmx value #{jmx_attribute_value} for attribute #{attribute} to #{jmx_object_name.object_name}")
+                      @logger.debug("Get jmx value #{jmx_attribute_value} for attribute #{attribute} to #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                       send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{attribute}", jmx_attribute_value)
                     end
                   rescue Exception => ex
-                    @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}")
+                    @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                     @logger.warn(ex.message)
                   end
                 end
               else
-                @logger.debug("No attribute to retrieve define on #{jmx_object_name.object_name}, will retrieve all")
+                @logger.debug("No attribute to retrieve define on #{jmx_object_name.object_name}, will retrieve all", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                 jmx_object_name.attributes.each_key do |attribute|
                   begin
                     jmx_attribute_value = jmx_object_name.send(attribute)
                     if jmx_attribute_value.instance_of? Java::JavaxManagementOpenmbean::CompositeDataSupport
-                      @logger.debug('The jmx value is a composite_data one')
+                      @logger.debug('The jmx value is a composite_data one', :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                       jmx_attribute_value.each do |jmx_attribute_value_composite|
-                        @logger.debug("Get jmx value #{jmx_attribute_value[jmx_attribute_value_composite]} for attribute #{jmx_object_name.attributes[attribute]}.#{jmx_attribute_value_composite} to #{jmx_object_name.object_name}")
+                        @logger.debug("Get jmx value #{jmx_attribute_value[jmx_attribute_value_composite]} for attribute #{jmx_object_name.attributes[attribute]}.#{jmx_attribute_value_composite} to #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                         send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}.#{jmx_attribute_value_composite}", jmx_attribute_value[jmx_attribute_value_composite])
                       end
                     else
-                      @logger.debug("Get jmx value #{jmx_attribute_value} for attribute #{jmx_object_name.attributes[attribute]} to #{jmx_object_name.object_name}")
+                      @logger.debug("Get jmx value #{jmx_attribute_value} for attribute #{jmx_object_name.attributes[attribute]} to #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                       send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}", jmx_attribute_value)
                     end
                   rescue Exception => ex
-                    @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}")
+                    @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
                     @logger.warn(ex.message)
                   end
                 end
