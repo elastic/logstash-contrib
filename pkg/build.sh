@@ -48,7 +48,7 @@ fi
 WGET=$(which wget 2>/dev/null)
 CURL=$(which curl 2>/dev/null)
 
-URLSTUB="http://download.elasticsearch.org/logstash/logstash/"
+[ -z "$URLSTUB" ] && URLSTUB="http://download.elasticsearch.org/logstash/logstash/"
 
 if [ "x$WGET" != "x" ]; then
   DOWNLOAD_COMMAND="wget -q -c -O"
