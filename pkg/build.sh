@@ -1,9 +1,11 @@
 #!/bin/bash
 # We only need to build two packages now, rpm and deb.  Leaving the os/version stuff in case things change.
 
-[ ! -f ../.VERSION.mk ] && make -C .. .VERSION.mk
+basedir=$(pwd)
 
-. ../.VERSION.mk
+[ ! -f $basedir/../.VERSION.mk ] && make -C .. .VERSION.mk
+
+. $basedir/../.VERSION.mk
 
 if ! git show-ref --tags | grep -q "$(git rev-parse HEAD)"; then
 	# HEAD is not tagged, add the date, time and commit hash to the revision
@@ -49,9 +51,9 @@ CURL=$(which curl 2>/dev/null)
 URLSTUB="http://download.elasticsearch.org/logstash/logstash/"
 
 if [ "x$WGET" != "x" ]; then
-  DOWNLOAD_COMMAND="wget -q -O"
+  DOWNLOAD_COMMAND="wget -q -c -O"
 elif [ "x$CURL" != "x" ]; then
-    DOWNLOAD_COMMAND="curl -s -L -o"
+    DOWNLOAD_COMMAND="curl -s -C -L -o"
 else
   echo "wget or curl are required."
   exit 1
@@ -75,13 +77,35 @@ tar -C $destdir -zxf $tar
 
 cd $destdir
 
+###
+### Epic one-liner used to find files that exist in contrib and NOT have a match 
+### in core.  
+### This finds all files in both extracted tarballs and counts file occurrences,
+### then finds the ones that have a count of 1 in the logstash-contrib-$VERSION 
+### directory (meaning that they don't exist in the logstash-$VERSION directory.  
+### It puts these in $PKGFILES and we use that to make the packages
+###
+### Per pipe breakdown of commands:
+#
+# find */ -type f       |            # traverse all the directories
+# sort -t / -k 2        |            # sort, ignoring the first field
+# tr '/' '\t'           |            # turn / into tabs
+# uniq -f 1 -c          |            # count duplicates, ignoring the first field
+# tr '\t' '/'           |            # turn tabs back into /
+# sort -t / -s -k 1n    |            # sort by the number of occurrences
+# awk '{print $1, $2}'  |            # remove leading spaces but still print both columns
+# grep ^1               |            # get lines starting with 1
+# grep logstash-contrib |            # get lines containing logstash-contrib
+# awk '{print $2}'      |            # Don't need the count now, so prune that column
+# sed -e "s#logstash-contrib-.*//##" # Prune leading directory name
+
 PKGFILES=$(find */ -type f | sort -t / -k 2 | tr '/' '\t' | uniq -f 1 -c | tr '\t' '/' | sort -t / -s -k 1n | awk '{print $1, $2}' | grep ^1 | grep logstash-contrib | awk '{print $2}' | sed -e "s#logstash-contrib-.*//##")
 
 cd logstash-contrib-${VERSION}
 
 rsync -R ${PKGFILES} ../$prefix
 
-cd ../../../
+cd $basedir
 
 case $os in
   centos|fedora|redhat|sl) 

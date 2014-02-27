@@ -146,7 +146,7 @@ show:
 	echo $(VERSION)
 
 .PHONY: prepare-tarball
-prepare-tarball tarball zip: WORKDIR=build/tarball/logstash-$(VERSION)
+prepare-tarball tarball zip: WORKDIR=build/tarball/logstash-contrib-$(VERSION)
 prepare-tarball: vendor-gems
 prepare-tarball:
 	@echo "=> Preparing tarball"
