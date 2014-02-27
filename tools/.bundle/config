@@ -1,4 +1,0 @@
----
-BUNDLE_PATH: /Users/buh/FORKS/logstash-contrib/vendor/bundle
-BUNDLE_CLEAN: true
-BUNDLE_DISABLE_SHARED_GEMS: '1'
