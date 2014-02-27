@@ -190,8 +190,8 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
                       send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{attribute}", jmx_attribute_value)
                     end
                   rescue Exception => ex
-                    @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
-                    @logger.warn(ex.message)
+                    @logger.debug("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
+                    @logger.debug(ex.message)
                   end
                 end
               else
@@ -210,8 +210,8 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
                       send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}", jmx_attribute_value)
                     end
                   rescue Exception => ex
-                    @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
-                    @logger.warn(ex.message)
+                    @logger.debug("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}", :base_metric_path => "#{base_metric_path}", :object_name => "#{object_name}")
+                    @logger.debug(ex.message)
                   end
                 end
               end
