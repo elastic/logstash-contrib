@@ -99,7 +99,7 @@ cd $destdir
 # awk '{print $2}'      |            # Don't need the count now, so prune that column
 # sed -e "s#logstash-contrib-.*//##" # Prune leading directory name
 
-PKGFILES=$(find */ -type f | sort -t / -k 2 | tr '/' '\t' | uniq -f 1 -c | tr '\t' '/' | sort -t / -s -k 1n | awk '{print $1, $2}' | grep ^1 | grep logstash-contrib | awk '{print $2}' | sed -e "s#logstash-contrib-.*//##")
+PKGFILES=$(find */ -type f | sort -t / -k 2 | tr '/' '\t' | uniq -f 1 -c | tr '\t' '/' | sort -t / -s -k 1n | awk '{print $1, $2}' | grep ^1 | grep logstash-contrib | awk '{print $2}' | sed -e "s#logstash-contrib-${VERSION}/##" -e "s#^/##")
 
 cd logstash-contrib-${VERSION}
 
