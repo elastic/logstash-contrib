@@ -2,6 +2,8 @@
 # We only need to build two packages now, rpm and deb.  Leaving the os/version stuff in case things change.
 
 basedir=$(pwd)
+tmpdir=$basedir/tmp
+mkdir -p $tmpdir
 
 [ ! -f $basedir/../.VERSION.mk ] && make -C .. .VERSION.mk
 
@@ -59,11 +61,11 @@ else
   exit 1
 fi
 
-TARGETDIR="$destdir"
+TARGETDIR="$tmpdir"
 SUFFIX=".tar.gz"
 FILEPATH="logstash-${VERSION}"
 FILENAME=${FILEPATH}${SUFFIX}
-TARGET="${destdir}/${FILENAME}"
+TARGET="${tmpdir}/${FILENAME}"
 
 $DOWNLOAD_COMMAND ${TARGET} ${URLSTUB}${FILENAME}
 if [ ! -f "${TARGET}" ]; then
@@ -72,10 +74,10 @@ if [ ! -f "${TARGET}" ]; then
   exit 1
 fi
 
-tar -C $destdir -zxf $TARGET
-tar -C $destdir -zxf $tar
+tar -C $tmpdir -zxf $TARGET
+tar -C $tmpdir -zxf $tar
 
-cd $destdir
+cd $tmpdir
 
 ###
 ### Epic one-liner used to find files that exist in contrib and NOT have a match 
@@ -99,11 +101,11 @@ cd $destdir
 # awk '{print $2}'      |            # Don't need the count now, so prune that column
 # sed -e "s#logstash-contrib-.*//##" # Prune leading directory name
 
-PKGFILES=$(find */ -type f | sort -t / -k 2 | tr '/' '\t' | uniq -f 1 -c | tr '\t' '/' | sort -t / -s -k 1n | awk '{print $1, $2}' | grep ^1 | grep logstash-contrib | awk '{print $2}' | sed -e "s#logstash-contrib-.*//##")
+PKGFILES=$(find */ -type f | sort -t / -k 2 | tr '/' '\t' | uniq -f 1 -c | tr '\t' '/' | sort -t / -s -k 1n | awk '{print $1, $2}' | grep ^1 | grep logstash-contrib | awk '{print $2}' | sed -e "s#logstash-contrib-${VERSION}/##" -e "s#^/##" )
 
 cd logstash-contrib-${VERSION}
 
-rsync -R ${PKGFILES} ../$prefix
+rsync -R ${PKGFILES} $basedir/$destdir/$prefix
 
 cd $basedir
 
