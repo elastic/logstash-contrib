@@ -31,6 +31,7 @@ Gem::Specification.new do |gem|
    gem.add_runtime_dependency "jdbc-sqlite3"                     #(MIT license)
    gem.add_runtime_dependency "rsolr"                            #(Apache 2.0 license)
    gem.add_runtime_dependency "jmx4r"                            #(Apache 2.0 license)
+   gem.add_runtime_dependency "jruby-jms"                        #(Apache 2.0 license)
 
   if RUBY_PLATFORM == 'java'
     gem.platform = RUBY_PLATFORM
