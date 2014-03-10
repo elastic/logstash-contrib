@@ -24,6 +24,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
 	config_name "jms"
 	milestone 1
 
+	default :config, "plain"
+
 	# A JMS message has three parts :
 	#	 Message Headers (required)
 	#	 Message Properties (optional)
@@ -180,8 +182,14 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Base
 						end
 
 					elsif msg.java_kind_of?(JMS::TextMessage)
-						event["message"] = msg.data # TODO(claveau): needs codec.decode or converter.convert ?
-
+						@codec.decode(msg.to_s) do |event_message|
+							# Copy out the header data into the message.
+							event.to_hash.each do |k,v|
+								event_message[k] = v
+							end
+							# Now lets overwrite the event.
+							event = event_message
+						end
 					else
 						@logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
 					end
