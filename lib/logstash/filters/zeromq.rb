@@ -78,6 +78,12 @@ class LogStash::Filters::ZeroMQ < LogStash::Filters::Base
     connect
   end #def register
 
+  public
+  def teardown
+    close
+    super()
+  end #def teardown
+
   private
   def close
     @logger.debug("0mq: closing socket.")
