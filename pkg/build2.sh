@@ -53,7 +53,7 @@ tarfiles $contribtar > $workdir/files.contrib
 tarfiles $logstashtar > $workdir/files.logstash
 
 # Find all files in contrib but not logstash core
-grep -Fvxf $workdir/files.logstash $workdir/files.contrib > $workdir/files
+grep -Fvxf $workdir/files.logstash $workdir/files.contrib | grep -v '/$' > $workdir/files
 set -x
 set -e
 
