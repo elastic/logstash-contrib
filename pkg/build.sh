@@ -1,13 +1,13 @@
 #!/bin/bash
 # We only need to build two packages now, rpm and deb.  Leaving the os/version stuff in case things change.
 
-basedir=$(pwd)
+basedir=$(dirname $0)/../
 tmpdir=$basedir/tmp
 mkdir -p $tmpdir
 
-[ ! -f $basedir/../.VERSION.mk ] && make -C .. .VERSION.mk
+[ ! -f $basedir/.VERSION.mk ] && make -C $basedir .VERSION.mk
 
-. $basedir/../.VERSION.mk
+. $basedir/.VERSION.mk
 
 if ! git show-ref --tags | grep -q "$(git rev-parse HEAD)"; then
 	# HEAD is not tagged, add the date, time and commit hash to the revision
@@ -41,10 +41,9 @@ fi
 mkdir -p $destdir/$prefix
 
 # Deploy the tarball to /opt/logstash
-tar="$(dirname $0)/../build/logstash-contrib-$VERSION.tar.gz"
+tar="$destdir/logstash-contrib-$VERSION.tar.gz"
 if [ ! -f "$tar" ] ; then
-echo "Unable to find $tar"
-exit 1
+  make -C $basedir build/logstash-contrib-$VERSION.tar.gz || exit 1
 fi
 
 WGET=$(which wget 2>/dev/null)
