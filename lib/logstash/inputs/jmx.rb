@@ -136,18 +136,25 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
         @logger.debug('Wait config to retrieve from queue conf')
         thread_hash_conf = queue_conf.pop
         @logger.debug("Retrieve config #{thread_hash_conf} from queue conf")
-
+        
+        if thread_hash_conf.has_key?('url')
+          @logger.debug("Connect on #{thread_hash_conf['url']}")
+        else
+          @logger.debug("Connect on #{thread_hash_conf['host']}:#{thread_hash_conf['port']}")
+        end
         @logger.debug('Check if jmx connection need a user/password')
         if thread_hash_conf.has_key?('username') and thread_hash_conf.has_key?('password')
-          @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']} with user #{thread_hash_conf['username']}")
+          @logger.debug("Connecting with user #{thread_hash_conf['username']}")
           jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
                                                  :port => thread_hash_conf['port'],
+                                                 :url => thread_hash_conf['url'],
                                                  :username => thread_hash_conf['username'],
                                                  :password => thread_hash_conf['password']
         else
           @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']}")
           jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
-                                                 :port => thread_hash_conf['port']
+                                                 :port => thread_hash_conf['port'],
+						 :url => thread_hash_conf['url']
         end
 
 
