@@ -173,3 +173,7 @@ tarball-test: #build/logstash-contrib-$(VERSION).tar.gz
 	$(QUIET)mkdir -p build/test-tarball/
 	tar -C build/test-tarball --strip-components 1 -xf build/logstash-contrib-$(VERSION).tar.gz
 	(cd build/test-tarball; bin/logstash rspec $(TESTS) --fail-fast)
+
+package: | tarball
+	sh pkg/build2.sh centos 6
+	sh pkg/build2.sh ubuntu 12.04
