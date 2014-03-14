@@ -63,7 +63,7 @@ tar -C $workdir/tarball -zxf $contribtar --strip-components 1
 
 _fpm() {
   target=$1
-  fpm -s dir -n logstash-contrib -v "$RELEASE" --iteration "1_$REVISION" \
+  fpm -s dir -n logstash-contrib -v "$RELEASE" \
     -a noarch --url "https://github.com/elasticsearch/logstash-contrib" \
     --description "Community supported plugins for Logstash" \
     -d "logstash = $RELEASE" \
@@ -74,10 +74,12 @@ _fpm() {
 case $os in
   centos|fedora|redhat|sl)
     _fpm -t rpm --rpm-use-file-permissions --rpm-user root --rpm-group root \
+      --iteration "1_$REVISION"  \
       -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files | head -1)
     ;;
   ubuntu|debian)
     _fpm -t deb --deb-user root --deb-group root \
+      --iteration "1-$REVISION"  \
       -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files | head -1)
     ;;
 esac
