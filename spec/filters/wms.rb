@@ -15,19 +15,19 @@ describe LogStash::Filters::Wms do
     # regular WMS query (GetCapabilities) from varnish logs
     sample '12.13.14.15 - - [23/Jan/2014:06:52:00 +0100] "GET http://wms.myserver.com/?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities' \
     ' HTTP/1.1" 200 202 "http://referer.com" "ArcGIS Client Using WinInet"' do
-      insist { subject["wms.service"] } == "wms"
+      insist { subject["wms.service"] } == "WMS"
       insist { subject["wms.version"] } == "1.3.0"
-      insist { subject["wms.request"] } == "getcapabilities"
+      insist { subject["wms.request"] } == "GetCapabilities"
     end
 
     # WMS query (GetMap) from varnish logs
     sample '12.34.56.78 - - [23/Jan/2014:06:52:20 +0100] "GET http://tile2.wms.de/mapproxy/service/?FORMAT=image%2Fpng&LAYERS=WanderlandEtappenNational,WanderlandEtappenRegional,WanderlandEtappenLokal,WanderlandEtappenHandicap&TRANSPARENT=TRUE&SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&STYLES=&SRS=EPSG%3A21781&BBOX=804000,30000,932000,158000&WIDTH=256&HEIGHT=256 HTTP/1.1" 200 1447 "http://map.wanderland.ch/?lang=de&route=all&layer=wanderwegnetz" "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; WOW64; Trident/6.0)"' do
-       insist { subject["wms.service"] } == "wms"
+       insist { subject["wms.service"] } == "WMS"
        insist { subject["wms.version"] } == "1.1.1"
-       insist { subject["wms.request"] } == "getmap"
-       insist { subject["wms.layers"] } == ["wanderlandetappennational", "wanderlandetappenregional", "wanderlandetappenlokal", "wanderlandetappenhandicap"]
+       insist { subject["wms.request"] } == "GetMap"
+       insist { subject["wms.layers"] } == ["WanderlandEtappenNational", "WanderlandEtappenRegional", "WanderlandEtappenLokal", "WanderlandEtappenHandicap"]
        insist { subject["wms.styles"] } == ""
-       insist { subject["wms.srs"] } == "epsg:21781"
+       insist { subject["wms.srs"] } == "EPSG:21781"
        insist { subject["wms.input_bbox.minx"] } == 804000.0
        insist { subject["wms.input_bbox.miny"] } == 30000.0
        insist { subject["wms.input_bbox.maxx"] } == 932000.0
@@ -39,7 +39,7 @@ describe LogStash::Filters::Wms do
        insist { subject["wms.width"] } == "256"
        insist { subject["wms.height"] } == "256"
        insist { subject["wms.format"] } == "image/png"
-       insist { subject["wms.transparent"] } == "true"
+       insist { subject["wms.transparent"] } == "TRUE"
      end
   end
   # we will no use only the request part without grok for readability

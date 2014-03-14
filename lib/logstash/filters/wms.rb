@@ -56,14 +56,15 @@ class LogStash::Filters::Wms < LogStash::Filters::Base
     # we use the request field if available, else fallback onto message
     msg = event["request"].nil? ? event["message"] : event["request"]
 
-    msg.downcase!
 
     # not a valid WMS request
-    return unless msg.include? "service=wms"
+    return unless msg.downcase.include? "service=wms"
 
     begin
       parsed_uri = URI(msg)
-      wms_parameters = Hash[*URI.decode_www_form(parsed_uri.query).flatten]
+      wms_parameters_cased = Hash[*URI.decode_www_form(parsed_uri.query).flatten]
+      wms_parameters = {}
+      wms_parameters_cased.each { |k,v| wms_parameters[k.downcase] = v }
     rescue # TODO: be more specific
       event["#{@prefix}errmsg"] = "Unable to parse the provided request URI: #{msg}"
       # at this point, we won't be able to do better
