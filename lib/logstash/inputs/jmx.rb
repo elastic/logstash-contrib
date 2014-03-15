@@ -1,4 +1,89 @@
-# Permits to retrieve metrics from jmx.
+# This input plugins permits to retrieve metrics from jmx.
+# It scan a folder, every <polling_frequency>, containing some
+# json configuration describing jvms to monitor with attributes to
+# retrieve.
+# Then a pool of threads will retrieve metrics and create events.
+#
+# ## The configuration:
+#
+# On the logstash configuration you have to set the polling frequency,
+# the number of thread use to poll metrics and a path where are stored
+# json files containing the configuration per jvm of metrics to retrieve.
+# Logstash input config exemple:
+#
+#     jmx{
+#       //Required
+#       path => "/apps/logstash_conf/jmxconf"
+#       //Optional, default 60s
+#       polling_frequency => 15
+#       type => "jmx"
+#       //Optional, default 4
+#       nb_thread => 4
+#     }
+#
+# json jmx config exemple:
+#
+#     {
+#       //Require: jmx listening host/ip
+#       "host" : "192.168.1.2",
+#       //Require jmx listening port
+#       "port" : 1335,
+#       //Optional the username to connect to jmx
+#       "username" : "user",
+#       //Optional the password to connect to jmx
+#       "password": "pass",
+#       //Optional, Used as the base of the metric name. If not set use <host>_<port>
+#       "alias" : "test.homeserver.elasticsearch",
+#       //List of JMX metrics to retrieve
+#       "queries" : [
+#       {
+#         //Required: The object name of Mbean to request
+#         "object_name" : "java.lang:type=Memory",
+#         //Optional: Use this alias in the metrics value instead of the object_name
+#         "object_alias" : "Memory"
+#       }, {
+#         "object_name" : "java.lang:type=Runtime",
+#         //Optional: Set of attributes to retrieve. If not set retrieve
+#         //all metrics available on the configured object_name.
+#         "attributes" : [ "Uptime", "StartTime" ],
+#         "object_alias" : "Runtime"
+#       }, {
+#         //object_name can be configured with * to retrieve all matching Mbeans
+#         "object_name" : "java.lang:type=GarbageCollector,name=*",
+#         "attributes" : [ "CollectionCount", "CollectionTime" ],
+#         //object_alias can be based on specific value from the object_name thanks to ${<varname>}.
+#         //In this case ${type} will be replaced by GarbageCollector...
+#         "object_alias" : "${type}.${name}"
+#       }, {
+#         "object_name" : "java.nio:type=BufferPool,name=*",
+#         "object_alias" : "${type}.${name}"
+#       } ]
+#     }
+#
+# Here is the output generated. Depending to the returned value
+# number/boolean or other it fullfill a metric_value_number or a
+# metric_value_string event field:
+#
+#     {
+#       "@version" => "1",
+#       "@timestamp" => "2014-02-18T20:57:27.688Z",
+#       "host" => "192.168.1.2",
+#       "path" => "/apps/logstash_conf/jmxconf",
+#       "type" => "jmx",
+#       "metric_path" => "test.homeserver.elasticsearch.GarbageCollector.ParNew.CollectionCount",
+#       "metric_value_number" => 2212
+#     }
+#
+#     {
+#       "@version" => "1",
+#       "@timestamp" => "2014-02-18T20:58:06.376Z",
+#       "host" => "localhost",
+#       "path" => "/apps/logstash_conf/jmxconf",
+#       "type" => "jmx",
+#       "metric_path" => "test.homeserver.elasticsearch.BufferPool.mapped.ObjectName",
+#       "metric_value_string" => "java.nio:type=BufferPool,name=mapped"
+#     }
+#
 class LogStash::Inputs::Jmx < LogStash::Inputs::Base
   config_name 'jmx'
   milestone 2
@@ -10,7 +95,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
   # Path where json conf files are stored
   config :path, :validate => :string, :required => true
 
-  # Indicate interval between to jmx metrics retrieval
+  # Indicate interval between two jmx metrics retrieval
   # (in s)
   config :polling_frequency, :validate => :number, :default => 60
 
