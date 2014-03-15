@@ -1,5 +1,6 @@
 # encoding: utf-8
 require "logstash/inputs/base"
+require "logstash/inputs/threadable"
 require "logstash/namespace"
 #require "jruby-jms"
 
@@ -20,7 +21,7 @@ require "logstash/namespace"
 #		}
 #
 #
-class LogStash::Inputs::Jms < LogStash::Inputs::Base
+class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	config_name "jms"
 	milestone 1
 
