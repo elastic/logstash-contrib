@@ -74,20 +74,13 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	# For some known examples, see: [Example jms.yml](https://github.com/reidmorrison/jruby-jms/blob/master/examples/jms.yml)
 	config :yaml_section, :validate => :string
 
-
-
-	# TODO(claveau): here is the the problem to deal with ...
-	# Each JMS broker comes with its own API, libraries and config parameters.
-	# The jruby-jms expects an array of properties where some are normalized, and some are specific.
-
-	# So, for this plugin, can we just expect a Yaml config file,
-	# or should we expose all the properties like the following ...
+	# If you do not use an yaml configuration use either the factory or jndi_name.
 
 	# An optional array of Jar file names to load for the specified
 	# JMS provider. By using this option it is not necessary
 	# to put all the JMS Provider specific jar files into the
-	# environment variable CLASSPATH prior to starting Logstash
-	config :require_jars, :validate => :array
+	# java CLASSPATH prior to starting Logstash.
+	config :required_jars, :validate => :array
 
 	# Name of JMS Provider Factory class
 	config :factory, :validate => :string
@@ -120,9 +113,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 		if @yaml_file
 			@jms_config = YAML.load_file(@yaml_file)[@yaml_section]
 
-		# TODO(claveau): causes an exception
-		# #<TypeError: can't dup NilClass> in /jms/connection.rb:172 (params.dup)
-		elsif @jndi_name = {
+		elsif @jndi_name
+			@jms_config = {
 				:require_jars => @require_jars,
 				:jndi_name => @jndi_name,
 				:jndi_context => @jndi_context}
@@ -138,12 +130,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 				}
 		end
 
-		@logger.debug @jms_config
-
+		@logger.debug("JMS Config being used", :context => @jms_config)
+		
 	end # def register
-
-
-
 
 
 	private
@@ -152,13 +141,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 				event = LogStash::Event.new
 
 				# Here, we can use the JMS Enqueue timestamp as the @timestamp
-				# TODO(claveau): investigate the reason why the Java integer Timestamp conversion is erroneous
-				# For example :
-				#	 when the Enqueue real time is "2014-02-12T11:20:58+01:00"
-				#	 we receive a msg.jms_timestamp => 1392200458000
-				# 	then the conversion ::Time.at(msg.jms_timestamp) => "46087-01-28T06:26:40.000+01:00"
 				if @use_jms_timestamp and msg.jms_timestamp
-					event.timestamp = ::Time.at(msg.jms_timestamp)
+					event.timestamp = ::Time.at(msg.jms_timestamp/1000)
 				end
 
 				if @include_header
