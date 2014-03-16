@@ -43,19 +43,12 @@ config :yaml_file, :validate => :string
 # For some known examples, see: [Example jms.yml](https://github.com/reidmorrison/jruby-jms/blob/master/examples/jms.yml)
 config :yaml_section, :validate => :string
 
-
-
-# TODO(claveau): here is the the problem to deal with ...
-# Each JMS broker comes with its own API, libraries and config parameters.
-# The jruby-jms expects an array of properties where some are normalized, and some are specific.
-
-# So, for this plugin, can we just expect a Yaml config file,
-# or should we expose all the properties like the following ...
+# If you do not use an yaml configuration use either the factory or jndi_name.
 
 # An optional array of Jar file names to load for the specified
 # JMS provider. By using this option it is not necessary
 # to put all the JMS Provider specific jar files into the
-# environment variable CLASSPATH prior to starting Logstash
+# java CLASSPATH prior to starting Logstash.
 config :require_jars, :validate => :array
 
 # Name of JMS Provider Factory class
@@ -87,15 +80,14 @@ config :jndi_context, :validate => :hash
 		@connection = nil
 
 		if @yaml_file
-				@jms_config = YAML.load_file(@yaml_file)[@yaml_section]
-
-		# TODO(claveau): causes an exception
-		# #<TypeError: can't dup NilClass> in /jms/connection.rb:172 (params.dup)
-		elsif @jndi_name = {
+			@jms_config = YAML.load_file(@yaml_file)[@yaml_section]
+		
+		elsif @jndi_name
+			@jms_config = {
 				:require_jars => @require_jars,
 				:jndi_name => @jndi_name,
 				:jndi_context => @jndi_context}
-
+		
 		elsif @factory
 			@jms_config = {
 				:require_jars => @require_jars,
@@ -106,8 +98,8 @@ config :jndi_context, :validate => :hash
 				:url => @broker_url # "broker_url" is named "url" with Oracle AQ
 				}
 		end
-		@logger.debug @jms_config
-
+		
+		@logger.debug("JMS Config being used", :context => @jms_config)
 		@connection = JMS::Connection.new(@jms_config)
 		@session = @connection.create_session()
 
