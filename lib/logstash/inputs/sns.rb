@@ -3,6 +3,7 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "open-uri"
 require "sinatra/base"
+require "base64"
 
 # Recieve events from an SNS topic
 class LogStash::Inputs::SNS < LogStash::Inputs::Base
@@ -19,6 +20,7 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
   def register
     require "rack/handler/puma"
     require "nokogiri"
+    @cached_certs = {}
   end # def register
 
   attr_reader :logger
@@ -31,16 +33,26 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
     handler = Sinatra.new do
       post("/") do
         request.body.rewind
-        case request.env["HTTP_X_AMZ_SNS_MESSAGE_TYPE"]
-        when "Notification"
-          plugin.handle_message(JSON.load(request.body))
-          200
-        when "SubscriptionConfirmation"
-          plugin.confirm_subscription(JSON.load(request.body))
-          200
+        if request.env.include? "HTTP_X_AMZ_SNS_MESSAGE_TYPE"
+          msg = JSON.load(request.body)
+          if plugin.verify_signature(msg)
+            case request.env["HTTP_X_AMZ_SNS_MESSAGE_TYPE"]
+            when "Notification"
+              plugin.handle_message(msg)
+            when "SubscriptionConfirmation"
+              plugin.confirm_subscription(msg)
+            when "UnsubscribeConfirmation"
+              plugin.logger.warn("Got UnsubscribeConfirmation message for topic", :topic_arn => env["HTTP_X_AMZ_TOPIC_ARN"])
+            else
+              # Probably not a valid SNS request
+              plugin.logger.info("Got an invalid message")
+              400
+            end
+          else
+            plugin.logger.warn("Message signature verification failed", :topic_arn => env["HTTP_X_AMZ_TOPIC_ARN"])
+            401
+          end
         else
-          # Probably not a valid SNS request
-          plugin.logger.info("Got an invalid message")
           400
         end
       end
@@ -84,4 +96,41 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
     @logger.warn("Failed requesting subscribition confirmation URL", :exception => e)
   end
 
+  # TODO: Verify the certificate issuer signature. We may need to preload logstash with Verisign certificates
+  def verify_signature(msg)
+    raise RuntimeError, "Signature version not supported" unless msg['SignatureVersion'] == '1'
+    signature_decoded = Base64.decode64(msg['Signature'])
+    cert = get_cert(msg['SigningCertURL'])
+    if cert.not_after < Time.now
+      @logger.warn("SNS Certificate has expired", :cert_expiry => cert.not_after, :cert_subject => cert.subjet.to_s)
+      return false
+    end
+    return false unless cert.subject.to_a.find{|c| c.first == "CN"}[1] == "sns.amazonaws.com"
+    cert.public_key.verify(OpenSSL::Digest::SHA1.new, signature_decoded, str_to_sign(msg))
+  rescue Exception => e
+    @logger.error("Exception while verifying SNS message signature", :exception => e)
+    false
+  end
+
+  private
+  def str_to_sign(msg)
+    signature_fields = case msg['Type']
+    when 'Notification'
+      ['Message', 'MessageId', 'Subject', 'Timestamp', 'TopicArn', 'Type'].sort
+    when 'SubscriptionConfirmation', "UnsubscribeConfirmation"
+      ['Message', 'MessageId', 'SubscribeURL', 'Timestamp', 'Token', 'TopicArn', 'Type'].sort
+    end
+    canonical_str = signature_fields.map{|field| [field, msg[field]] if msg[field] }.compact.flatten.join("\n")
+    canonical_str += "\n"
+    return canonical_str
+  end
+
+  def get_cert(cert_name)
+    unless @cached_certs.include? cert_name
+        cert_body = open(cert_name).read
+        cert = OpenSSL::X509::Certificate.new(cert_body)
+        @cached_certs[cert_name] = cert
+    end
+    @cached_certs[cert_name]
+  end
 end # class LogStash::Inputs::SNS
