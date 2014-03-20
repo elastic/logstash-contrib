@@ -6,6 +6,11 @@ require "sinatra/base"
 require "base64"
 
 # Recieve events from an SNS topic
+# To use this plugin, create a subscription to an SNS topic using AWS SNS API and specify the URL of this plugin as the endpoint.
+# As a convinience, you may specify a trailing path in the URL endpoint which will be stored in the [sns][endpoint_path] field.
+# 
+# The plugin doesn't provide HTTPS, if you need ssl you should use Apache or Nginx in front of Logstash
+# Security note: Although the plugin does verify SNS message signatures it does not (yet) verify the signing certificate, which basically means anyone can sign a valid message. 
 class LogStash::Inputs::SNS < LogStash::Inputs::Base
   config_name "sns"
   milestone 1
@@ -15,6 +20,7 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
   # The url to connect to or serve from
   config :port, :validate => :number, :default => 9991
 
+  # The address to bind (listen) on
   config :bind_address, :validate => :string, :default => "0.0.0.0"
 
   def register
@@ -31,14 +37,14 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
     # bind self to variable so we can reference it from whithin the sinatra handler
     plugin = self 
     handler = Sinatra.new do
-      post("/") do
+      post("/*") do
         request.body.rewind
         if request.env.include? "HTTP_X_AMZ_SNS_MESSAGE_TYPE"
           msg = JSON.load(request.body)
           if plugin.verify_signature(msg)
             case request.env["HTTP_X_AMZ_SNS_MESSAGE_TYPE"]
             when "Notification"
-              plugin.handle_message(msg)
+              plugin.handle_message(msg, params[:splat])
             when "SubscriptionConfirmation"
               plugin.confirm_subscription(msg)
             when "UnsubscribeConfirmation"
@@ -67,7 +73,7 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
     finished
   end
 
-  def handle_message(msg)
+  def handle_message(msg, endpoint_path)
     codec.decode(msg["Message"]) do |event|
       event["sns"] = {
                         "topic_arn" => msg["TopicArn"],
@@ -75,6 +81,7 @@ class LogStash::Inputs::SNS < LogStash::Inputs::Base
                         "timestamp" => msg["Timestamp"]
                       }
       event["sns"]["subject"] = msg["Subject"] if msg["Subject"]
+      event["sns"]["endpoint_path"] = endpoint_path
       decorate(event)
       @output_queue << event
     end
