@@ -130,7 +130,7 @@ case $os in
     fi
 
     fpm -s dir -t deb -n logstash-contrib -v "$RELEASE" \
-      -a all --iteration "1-${DEB_REVISION}" \
+      -a all --iteration "1-${DEB_REVISION}" --ignore-iteration-in-dependencies \
       --url "$URL" \
       --description "$DESCRIPTION" \
       --vendor "Elasticsearch" \
