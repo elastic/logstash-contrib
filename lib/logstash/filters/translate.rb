@@ -37,13 +37,16 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
   #     }
   config :dictionary, :validate => :hash,  :default => {}
 
-  # name with full path of external dictionary file.    
+  # Name with full path of external dictionary file.    
   # format of the table should be a YAML file which will be merged with the @dictionary.
   # make sure you encase any integer based keys in quotes.
+  # 
+  # Important: use "100" not 100 as key value (no typecast)
+  #
   # The YAML file should look something like this:
   #
-  #     100: Continue
-  #     101: Switching Protocols
+  #     "100": Continue
+  #     "101": Switching Protocols
   config :dictionary_path, :validate => :path
 
   # The destination field you wish to populate with the translation code.
