@@ -112,7 +112,7 @@ class LogStash::Outputs::Zabbix < LogStash::Outputs::Base
       item.each_with_index do |key, index|
         begin
           zmsg = event[field[index]]
-          zmsg = Shellwords.shellescape(zmsg)
+          zmsg = Shellwords.shellescape(zmsg.to_s)
         rescue => e
           @logger.warn("Error during receiving message for sending",
                        :event => event,
