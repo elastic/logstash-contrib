@@ -6,6 +6,15 @@ used in conjunction with [Logstash](https://github.com/elasticsearch/logstash).
 The plugins here are maintained by the core Logstash team, and supported by the 
 community.
 
+## Developing
+
+Logstash will load plugins from logstash-contrib if you use the --pluginpath (-p) 
+argument pointing at this project:
+
+    bin/logstash agent -p .../logstash-contrib/lib [options]
+
+See the README.md in the main Logstash project for more information.
+
 ## Building
 
 The same build principles which exist in the core Logstash project will apply here.
