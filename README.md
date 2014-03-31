@@ -11,7 +11,7 @@ community.
 Logstash will load plugins from logstash-contrib if you use the --pluginpath (-p) 
 argument pointing at this project:
 
-    bin/logstash agent -p .../logstash-contrib/lib [options]
+    bin/logstash agent -p /path/to/logstash-contrib/lib [options]
 
 See the README.md in the main Logstash project for more information.
 
