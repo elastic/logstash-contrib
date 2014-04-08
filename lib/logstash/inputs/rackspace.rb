@@ -20,13 +20,20 @@ class LogStash::Inputs::Rackspace < LogStash::Inputs::Base
   # Rackspace Queue Name
   config :queue,  :validate => :string, :default => 'logstash'
 
-  # number of messages to claim
+  # Number of messages to claim
   # Min: 1, Max: 10
   config :claim,    :validate => :number, :default => 1
   
-  # length of time to hold claim
-  # Min: 60
+  # Length of time to hold claim in seconds
+  # Min: 60, Max: 43200 (12 hours)
   config :ttl,    :validate => :number, :default => 60
+
+  # Grace period for claim in seconds
+  # Min: 60, Max: 43200 (12 hours)
+  config :grace,  :validate => :number, :default => 60
+
+  # Polling interval in seconds (-1 to disable)
+  config :interval, :validate => :number, :default => 2
 
   public
   def register
@@ -59,10 +66,9 @@ class LogStash::Inputs::Rackspace < LogStash::Inputs::Base
   private
   def queue_event(msg, output_queue)
     begin
-      @codec.decode(msg.body.to_s) do |event|
-        decorate(event)
-        output_queue << event
-      end
+      event = LogStash::Event.new(msg.body)
+      decorate(event)
+      output_queue << event
       msg.destroy
     rescue => e # parse or event creation error
       @logger.error("Failed to create event", :message => msg, :exception => e,
@@ -73,12 +79,15 @@ class LogStash::Inputs::Rackspace < LogStash::Inputs::Base
   public
   def run(output_queue)
     while !finished?
-      claim = @rackspace_queue.claims.create :ttl => @ttl, :grace => 100, :limit => @claim
+      claim = @rackspace_queue.claims.create :ttl => @ttl, :grace => @grace, :limit => @claim
       if claim
         claim.messages.each do |message|
           queue_event message, output_queue
         end
       end # unless
+      if @interval > 0
+        sleep @interval
+      end # if
     end # while !finished
   end # def run
 
