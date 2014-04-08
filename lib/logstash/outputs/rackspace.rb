@@ -20,6 +20,12 @@ class LogStash::Outputs::Rackspace < LogStash::Outputs::Base
   config :region, :validate => :string, :default => 'dfw'
 
   # Rackspace queue name
+  #
+  # The name MUST NOT exceed 64 bytes in length, and is limited to
+  # US-ASCII letters, digits, underscores and hyphens.
+  #
+  # Note that there is a bug in Fog versions up to and including
+  # 1.21.0 that prevents usage with queue names that include a hyphen.
   config :queue,  :validate => :string, :default => 'logstash'
 
   # Time for item to live in queue
