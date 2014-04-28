@@ -44,6 +44,11 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
   # Hash of fields to copy from old event (found via elasticsearch) into new event
   config :fields, :validate => :hash, :default => {}
 
+  # Ignore errors; assume empty result set (query failed)
+  # Setting this turns off error logging as exceptions are unhandled
+  # This can make debugging the query somewhat tricky...
+  config :fail_on_error, :validate => :string, :default => "false"
+
   public
   def register
     require "elasticsearch"
@@ -61,14 +66,21 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
 
       results = @client.search q: query_str, sort: @sort, size: 1
 
-      @fields.each do |old, new|
-        event[new] = results['hits']['hits'][0]['_source'][old]
+      if results.length != 0
+        @fields.each do |old, new|
+          event[new] = results['hits']['hits'][0]['_source'][old]
+        end
+        filter_matched(event)
+      else if fail_on_error == "true" && results.length == 0
+        event[fail_on_error] = "true"
+        filter_matched(event)
       end
 
-      filter_matched(event)
     rescue => e
-      @logger.warn("Failed to query elasticsearch for previous event",
+      if fail_on_error == "false"
+        @logger.warn("Failed to query elasticsearch for previous event",
                    :query => query_str, :event => event, :error => e)
+      end
     end
   end # def filter
 end # class LogStash::Filters::Elasticsearch
