@@ -47,7 +47,7 @@ fi
 # Find files that only contrib contains.
 tarfiles() {
   log "Listing files in $1" 
-  tar -ztf "$1" | sed -re 's@^[^/]+/@@' | sort
+  tar -ztf "$1" | grep -v '/$' | sed -re 's@^[^/]+/@@' | sort
 }
 tarfiles $contribtar > $workdir/files.contrib
 tarfiles $logstashtar > $workdir/files.logstash
