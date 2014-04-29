@@ -47,7 +47,7 @@ fi
 # Find files that only contrib contains.
 tarfiles() {
   log "Listing files in $1" 
-  tar -ztf "$1" | sed -re 's@^[^/]+/@@' | sort
+  tar -ztf "$1" | grep -v '/$' | sed -re 's@^[^/]+/@@' | sort
 }
 tarfiles $contribtar > $workdir/files.contrib
 tarfiles $logstashtar > $workdir/files.logstash
@@ -75,11 +75,11 @@ case $os in
   centos|fedora|redhat|sl)
     _fpm -t rpm --rpm-use-file-permissions --rpm-user root --rpm-group root \
       --iteration "1_$REVISION" --rpm-ignore-iteration-in-dependencies \
-      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files | head -1)
+      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files)
     ;;
   ubuntu|debian)
     _fpm -t deb --deb-user root --deb-group root \
       --iteration "1-$REVISION" --deb-ignore-iteration-in-dependencies \
-      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files | head -1)
+      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files)
     ;;
 esac
