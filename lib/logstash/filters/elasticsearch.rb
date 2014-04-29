@@ -75,8 +75,8 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
       if fail_on_error == "true"
         @logger.warn("Failed to query elasticsearch for previous event",
                    :query => query_str, :event => event, :error => e)
-        else
-        event[fail_on_error] = "true"
+      else
+        event[fail_on_error] = "search failed to return any results"
         filter_matched(event)
       end
     end
