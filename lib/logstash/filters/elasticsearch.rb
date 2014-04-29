@@ -45,9 +45,9 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
   config :fields, :validate => :hash, :default => {}
 
   # Ignore errors; assume empty result set (query failed)
-  # Setting this turns off error logging as exceptions are unhandled
+  # Unsetting this turns off error logging as exceptions are unhandled
   # This can make debugging the query somewhat tricky...
-  config :fail_on_error, :validate => :string, :default => "false"
+  config :fail_on_error, :validate => :string, :default => "true"
 
   public
   def register
@@ -66,20 +66,18 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
 
       results = @client.search q: query_str, sort: @sort, size: 1
 
-      if results.length != 0
-        @fields.each do |old, new|
-          event[new] = results['hits']['hits'][0]['_source'][old]
-        end
-        filter_matched(event)
-      else if fail_on_error == "true" && results.length == 0
-        event[fail_on_error] = "true"
-        filter_matched(event)
+      @fields.each do |old, new|
+        event[new] = results['hits']['hits'][0]['_source'][old]
       end
+      filter_matched(event)
 
     rescue => e
-      if fail_on_error == "false"
+      if fail_on_error == "true"
         @logger.warn("Failed to query elasticsearch for previous event",
                    :query => query_str, :event => event, :error => e)
+        else
+        event[fail_on_error] = "true"
+        filter_matched(event)
       end
     end
   end # def filter
