@@ -125,7 +125,6 @@ class LogStash::Outputs::Zabbix < LogStash::Outputs::Base
 
         begin
           f = IO.popen(cmd, "a+")
-          f.close_write unless f.closed?
 
           command_output = f.gets
           command_processed = command_output[/processed: (\d+)/,1]
