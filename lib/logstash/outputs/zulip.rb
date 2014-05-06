@@ -23,7 +23,7 @@ class LogStash::Outputs::Zulip < LogStash::Outputs::Base
   # The Stream name / Private address
   config :to, :validate => :string, :required => true
 
-  # The Stream subject. This is not used when `zuliptype` is "private"
+  # The Stream subject. This is not used when `zuliptype` is "private". Event tokens are usable here
   config :subject, :validate => :string, :required => false
 
   # Message format to send, event tokens are usable here.
@@ -57,7 +57,7 @@ class LogStash::Outputs::Zulip < LogStash::Outputs::Base
       request.add_field("User-Agent", "ZulipLogstash/0.1")
       
       if @zuliptype == 'stream'
-        request.set_form_data({'type' => 'stream', 'to' => @to, 'subject' => @subject, 'content' =>  event.sprintf(@format)})
+        request.set_form_data({'type' => 'stream', 'to' => @to, 'subject' => event.sprintf(@subject), 'content' =>  event.sprintf(@format)})
       elsif @zuliptype == 'private'
         request.set_form_data({'type' => 'private', 'to' => @to ,'content' =>  event.sprintf(@format)})
       end
