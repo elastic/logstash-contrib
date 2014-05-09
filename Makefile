@@ -12,6 +12,18 @@ ifeq (@,$(QUIET))
 	QUIET_OUTPUT=> /dev/null 2>&1
 endif
 
+MVN_URL=http://repo1.maven.org/maven2/
+AWS_DEPS := com/amazonaws/amazon-kinesis-client/1.0.0/amazon-kinesis-client-1.0.0.jar \
+	com/amazonaws/aws-java-sdk/1.6.9.1/aws-java-sdk-1.6.9.1.jar \
+	commons-codec/commons-codec/1.3/commons-codec-1.3.jar \
+	commons-logging/commons-logging/1.1.1/commons-logging-1.1.1.jar \
+	org/apache/httpcomponents/httpclient/4.2/httpclient-4.2.jar \
+	org/apache/httpcomponents/httpcore/4.2/httpcore-4.2.jar \
+	com/fasterxml/jackson/core/jackson-annotations/2.1.1/jackson-annotations-2.1.1.jar \
+	com/fasterxml/jackson/core/jackson-core/2.1.1/jackson-core-2.1.1.jar \
+	com/fasterxml/jackson/core/jackson-databind/2.1.1/jackson-databind-2.1.1.jar \
+	log4j/log4j/1.2.17/log4j-1.2.17.jar
+
 WGET=$(shell which wget 2>/dev/null)
 CURL=$(shell which curl 2>/dev/null)
 
@@ -102,11 +114,18 @@ vendor:
 vendor/jar: | vendor
 	$(QUIET)mkdir $@
 
+vendor/jar/aws: | vendor/jar
+	$(QUIET)mkdir $@
+
 vendor-jruby: $(JRUBY)
 
 $(JRUBY): | vendor/jar
 	$(QUIET)echo " ==> Downloading jruby $(JRUBY_VERSION)"
 	$(QUIET)$(DOWNLOAD_COMMAND) $@ $(JRUBY_URL)
+
+$(AWS_DEPS): | vendor/jar/aws
+	$(QUIET)echo " ==> Downloading $@ to vendor/jar/aws/$(notdir $@)"
+	$(QUIET)test -s vendor/jar/aws/$(notdir $@) || $(DOWNLOAD_COMMAND) vendor/jar/aws/$(notdir $@) $(MVN_URL)$@
 
 # Always run vendor/bundle
 .PHONY: fix-bundler
@@ -117,7 +136,7 @@ fix-bundler:
 vendor-gems: | vendor/bundle
 
 .PHONY: vendor/bundle
-vendor/bundle: | vendor $(JRUBY)
+vendor/bundle: | vendor $(AWS_DEPS) $(JRUBY)
 	@echo "=> Ensuring ruby gems dependencies are in $@..."
 	-$(QUIET)$(JRUBY_CMD) gembag.rb logstash-contrib.gemspec
 	@# Purge any junk that fattens our jar without need!
