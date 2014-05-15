@@ -170,7 +170,7 @@ prepare-tarball: vendor-gems
 prepare-tarball:
 	@echo "=> Preparing tarball"
 	$(QUIET)$(MAKE) $(WORKDIR)
-	$(QUIET)rsync -a --relative lib spec vendor/bundle/jruby --exclude 'vendor/bundle/jruby/1.9/cache' --exclude 'vendor/bundle/jruby/1.9/gems/*/doc' --exclude 'lib/logstash/version.rb'  $(WORKDIR)
+	$(QUIET)rsync -a --relative lib spec vendor/bundle/jruby vendor/jar/aws --exclude 'vendor/bundle/jruby/1.9/cache' --exclude 'vendor/bundle/jruby/1.9/gems/*/doc' --exclude 'lib/logstash/version.rb'  $(WORKDIR)
 #	$(QUIET)sed -i -e 's/^LOGSTASH_VERSION = .*/LOGSTASH_VERSION = "$(VERSION)"/' $(WORKDIR)/lib/logstash/version.rb
 
 .PHONY: tarball
