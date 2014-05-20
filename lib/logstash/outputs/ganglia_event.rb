@@ -72,7 +72,7 @@ class LogStash::Outputs::GangliaEvent < LogStash::Outputs::Base
       rbody = ""
       response.read_body { |c| rbody << c }
     rescue Exception => e
-      @logger.info("Unhandled exception", :uri => uri, :response => response, :exception => e, :stacktrace => e.backtrace)
+      @logger.warn("Unhandled exception", :uri => uri, :response => response, :exception => e, :stacktrace => e.backtrace)
     end
   end # def receive
 
