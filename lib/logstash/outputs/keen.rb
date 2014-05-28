@@ -80,7 +80,7 @@ class LogStash::Outputs::Keen < LogStash::Outputs::Base
   end # def flush
 
   def post(body)
-    @logger.debug("Posting events to Keen IO", :size => body.size
+    @logger.debug("Posting events to Keen IO", :size => body.size)
     begin
       @keen.publish_batch(
         @collection => body
