@@ -27,7 +27,9 @@ require "logstash/util/socket_peer"
 #	zendesk
 #	{
 #		domain => "company.zendesk.com"
+#		# Specify either username and password or username and api_token for authentication
 #		username => "user@company.com"
+#		# password => "your_password"
 #		api_token => "your_zendesk_api_token"
 #		api_logger => false
 #		fetch_organizations => true
@@ -106,8 +108,10 @@ class LogStash::Inputs::Zendesk < LogStash::Inputs::Base
   #   Requires a Zendesk admin user account.
   config :username, :validate => :string, :required => true
 
-  ## Zendesk api token
-  #   Ask your Zendesk administrator for your company's api token.
+  # Authentication method using user password
+  config :password, :validate => :password, :required => false
+
+  # Authentication method using api token instead of password
   config :api_token, :validate => :password, :required => false
 
   # If set to true, enable additional logging from Zendesk client api.
@@ -155,7 +159,14 @@ class LogStash::Inputs::Zendesk < LogStash::Inputs::Base
     @zd_client = ZendeskAPI::Client.new do |zconfig|
       zconfig.url = "https://#{@domain}/api/v2" # zendesk ruby client api 1.3.5 supports zendesk api v2
       zconfig.username = @username
-      zconfig.token = @api_token.value
+  	  if @password.nil? && @api_token.nil?
+        @logger.error("Must specify either a password or api_token.", :password => @password, :api_token => @api_token)
+      elsif !@password.nil? && @api_token.nil?
+        zconfig.password = @password.value
+      elsif @password.nil? && !@api_token.nil?
+        zconfig.token = @api_token.value
+      else @logger.error("Cannot specify both password and api_token input parameters.", :password => @password, :api_token => @api_token)
+      end
       zconfig.retry = true # this is a feature of the Zendesk client api, it automatically retries when hitting rate limits
       if @api_logger
         zconfig.logger = Logger.new(STDOUT)
