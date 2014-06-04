@@ -107,6 +107,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
     event['host'] = host
     event['path'] = @path
     event['type'] = @type
+    decorate(event)
     number_type = [Fixnum, Bignum, Float]
     boolean_type = [TrueClass, FalseClass]
     metric_path_substituted = metric_path.gsub(' ','_').gsub('"','')
