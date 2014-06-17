@@ -112,7 +112,6 @@ class LogStash::Outputs::Zabbix < LogStash::Outputs::Base
       item.each_with_index do |key, index|
         begin
           zmsg = event[field[index]]
-          zmsg = Shellwords.shellescape(zmsg)
         rescue => e
           @logger.warn("Error during receiving message for sending",
                        :event => event,
@@ -124,7 +123,8 @@ class LogStash::Outputs::Zabbix < LogStash::Outputs::Base
         @logger.debug("Running zabbix command", :command => cmd)
 
         begin
-          f = IO.popen(cmd, "a+")
+          # fix for potential shell injection
+          f = IO.popen(["#{@zabbix_sender}", "-z" , "#{@host}", "-p", "#{@port}", "-s", "#{host[index]}", "-k", "#{item[index]}", "-o", "#{zmsg}", "-v" ], "r+")
           f.close_write unless f.closed?
 
           command_output = f.gets
