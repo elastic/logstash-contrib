@@ -1,6 +1,7 @@
 # encoding: utf-8
 require "logstash/filters/base"
 require "logstash/namespace"
+require "logstash/environment"
 
 
 # JSON encode filter. Takes a field and serializes it into JSON
