@@ -109,11 +109,22 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
   # 	filter { cipher { iv_random_length => 16 }} 
   config :iv_random_length, :validate => :number
   
+    
+  # If this is set the internal Cipher instance will be 
+  # re-used up to @max_cipher_reuse times before being
+  # reset() and re-created from scratch
+  #
+  # This is optional, the default is no re-use and
+  # max_cipher_reuse = 1 by default
+  #  
+  # 	filter { cipher { max_cipher_reuse => 1000 }} 
+  config :max_cipher_reuse, :validate => :number, :default => 1
+  
+  
   def register
     require 'base64' if @base64
     init_cipher
   end # def register
-
 
   def filter(event)
     return unless filter?(event)
@@ -163,19 +174,38 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
       
     rescue => e
       @logger.warn("Exception catch on cipher filter", :event => event, :error => e)
+      
+      # force a re-initialize on error to be safe
+      init_cipher
+      
     else
+      @total_cipher_uses += 1
+    
       event[@target]= result
+      
       #Is it necessary to add 'if !result.nil?' ? exception have been already catched.
       #In doubt, I keep it.
       filter_matched(event) if !result.nil?
-      #Too much bad result can be a problem, reinit cipher prevent this.
-      init_cipher
+      
+      if !@max_cipher_reuse.nil? and @total_cipher_uses >= @max_cipher_reuse 
+      	  @logger.debug("max_cipher_reuse["+@max_cipher_reuse.to_s+"] reached, total_cipher_uses = "+@total_cipher_uses.to_s)
+      	  init_cipher
+      end
+      
     end
   end # def filter
 
   def init_cipher
-
+  
+    if !@cipher.nil? 
+       @cipher.reset 
+       @cipher = nil
+    end
+   
     @cipher = OpenSSL::Cipher.new(@algorithm)
+    
+    @total_cipher_uses = 0
+    
     if @mode == "encrypt"
       @cipher.encrypt
     elsif @mode == "decrypt"
