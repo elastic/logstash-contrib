@@ -96,6 +96,12 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
 
     #If decrypt or encrypt fails, we keep it it intact.
     begin
+      
+      if (event[@source].nil? || event[@source].empty?) 
+        @logger.debug("Event to filter, event 'source' field: " + @source + " was null(nil) or blank, doing nothing")
+      	return
+      end
+    
       #@logger.debug("Event to filter", :event => event)
       data = event[@source]
       if @mode == "decrypt"
