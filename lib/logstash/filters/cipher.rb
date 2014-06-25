@@ -1,6 +1,7 @@
 # encoding: utf-8
 require "logstash/filters/base"
 require "logstash/namespace"
+require "openssl"
 
 
 # This filter parses a source and apply a cipher or decipher before
