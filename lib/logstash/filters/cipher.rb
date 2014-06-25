@@ -102,7 +102,7 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
       end
       result = @cipher.update(data) + @cipher.final
       if @mode == "encrypt"
-        data =  Base64.encode64(data) if @base64 == true
+        result =  Base64.encode64(result) if @base64 == true
       end
     rescue => e
       @logger.warn("Exception catch on cipher filter", :event => event, :error => e)
