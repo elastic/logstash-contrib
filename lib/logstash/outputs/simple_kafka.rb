@@ -24,12 +24,9 @@ class LogStash::Outputs::SimpleKafka < LogStash::Outputs::Base
   public
 
   def register
-    STDERR.puts "creating producer"
-
     @producer = Poseidon::Producer.new(["#{@host}:#{@port}"], @client_id)
 
     @codec.on_event do |payload|
-      STDERR.puts "sending event"
       message = Poseidon::MessageToSend.new(@topic_id, payload)
       @producer.send_messages([message])
     end
