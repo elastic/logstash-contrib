@@ -59,7 +59,7 @@ class LogStash::Filters::Wmi < LogStash::Filters::Base
   def filter(event)
     return unless filter?(event)
 
-	@wmi = WIN32OLE.connect("winmgmts://")
+    @wmi = WIN32OLE.connect("winmgmts://")
 
     @logger.debug("Running wmi filter", :event => event)
 
@@ -71,10 +71,10 @@ class LogStash::Filters::Wmi < LogStash::Filters::Base
     end
 
     begin
-	  @query = event.sprintf(@query)
-	  @logger.debug("Executing WMI query '#{@query}'")
+	  actualQuery = event.sprintf(@query)
+	  @logger.debug("Executing WMI query '#{actualQuery}'")
 
-	  @wmi.ExecQuery(@query).each do |wmiobj|
+	  @wmi.ExecQuery(actualQuery).each do |wmiobj|
 	      wmiobj.Properties_.each do |prop|
             dest[prop.name] = prop.value
           end
