@@ -6,6 +6,8 @@ require "zabbixapi"
 
 # The zabbix output is used for sending item data to zabbix via the
 # zabbix_sender executable.
+# This version require the zabbixapi lib (https://github.com/express42/zabbixapi)
+# You can install it via gems or copy the zabbixapi.rb and zabbixapi directory into the logstash lib folder (for windows users).
 #
 # For this output to work, your event must have the following fields:
 #
