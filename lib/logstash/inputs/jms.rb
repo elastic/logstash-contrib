@@ -61,12 +61,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	# This parameter has non influence in the case of a subcribed Topic.
 	config :interval, :validate => :number, :default => 10
 
-	# Name of the Queue to consume.
-	# Mandatory unless :topic_name is supplied
-	config :queue_name, :validate => :string
-	# Name of the Topic to subscribe to.
-	# Mandatory unless :queue_name is supplied
-	config :topic_name, :validate => :string
+	# If pub-sub (topic) style should be used or not.
+	# Mandatory
+	config :pub_sub, :validate => :boolean, :default => false
+	# Name of the destination queue or topic to use.
+	# Mandatory
+	config :destination, :validate => :string
 
 	# Yaml config file
 	config :yaml_file, :validate => :string
@@ -131,7 +131,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 		end
 
 		@logger.debug("JMS Config being used", :context => @jms_config)
-		
+
 	end # def register
 
 
@@ -197,10 +197,16 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	def run_consumer(output_queue)
 		JMS::Connection.session(@jms_config) do |session|
 			while(true)
-				session.consume(:queue_name => @queue_name, :timeout=>@timeout, :selector => @selector) do |message|
-					queue_event message, output_queue
+				if (@pub_sub)
+					session.consume(:topic_name => @descriptor, :timeout=>@timeout, :selector => @selector) do |message|
+						queue_event message, output_queue
+					end
+				else
+					session.consume(:queue_name => @descriptor, :timeout=>@timeout, :selector => @selector) do |message|
+						queue_event message, output_queue
+					end
 				end
-			sleep @interval
+				sleep @interval
 			end
 		end
 	rescue LogStash::ShutdownSignal
@@ -221,8 +227,14 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 		connection.on_exception do |jms_exception|
 			@logger.warn("JMS Exception has occurred: #{jms_exception}")
 		end
-		connection.on_message(:queue_name => @queue_name, :selector => @selector) do |message|
-			queue_event message, output_queue
+		if (@pub_sub)
+			connection.on_message(:topic_name => @destination, :selector => @selector) do |message|
+				queue_event message, output_queue
+			end
+		else
+			connection.on_message(:queue_name => @destination, :selector => @selector) do |message|
+				queue_event message, output_queue
+			end
 		end
 		connection.start
 		while(true)
@@ -250,8 +262,14 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 				raise jms_exception
 			end
 			# Define Asynchronous code block to be called every time a message is received
-			connection.on_message(:queue_name => @queue_name, :selector => @selector) do |message|
-				queue_event message, output_queue
+			if (@pub_sub)
+				connection.on_message(:topic_name => @destination, :selector => @selector) do |message|
+					queue_event message, output_queue
+				end
+			else
+				connection.on_message(:queue_name => @destination, :selector => @selector) do |message|
+					queue_event message, output_queue
+				end
 			end
 			# Since the on_message handler above is in a separate thread the thread needs
 			# to do some other work. It will just sleep for 10 seconds.

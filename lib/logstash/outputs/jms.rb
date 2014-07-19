@@ -30,12 +30,12 @@ config :timeout, :validate => :number, :default => 1000
 # TODO(AlphaCluster) need to reconfigure delivery mode
 #config :delivery_mode, :validate => :string, :default => nil
 
-# Name of the Queue to consume.
-# Mandatory unless :topic_name is supplied
-config :queue_name, :validate => :string
-# Name of the Topic to subscribe to.
-# Mandatory unless :queue_name is supplied
-config :topic_name, :validate => :string
+# If pub-sub (topic) style should be used or not.
+# Mandatory
+config :pub_sub, :validate => :boolean, :default => false
+# Name of the destination queue or topic to use.
+# Mandatory
+config :destination, :validate => :string
 
 # Yaml config file
 config :yaml_file, :validate => :string
@@ -81,13 +81,13 @@ config :jndi_context, :validate => :hash
 
 		if @yaml_file
 			@jms_config = YAML.load_file(@yaml_file)[@yaml_section]
-		
+
 		elsif @jndi_name
 			@jms_config = {
 				:require_jars => @require_jars,
 				:jndi_name => @jndi_name,
 				:jndi_context => @jndi_context}
-		
+
 		elsif @factory
 			@jms_config = {
 				:require_jars => @require_jars,
@@ -98,16 +98,16 @@ config :jndi_context, :validate => :hash
 				:url => @broker_url # "broker_url" is named "url" with Oracle AQ
 				}
 		end
-		
+
 		@logger.debug("JMS Config being used", :context => @jms_config)
 		@connection = JMS::Connection.new(@jms_config)
 		@session = @connection.create_session()
 
 		# Cache the producer since we should keep reusing this one.
-		if @queue_name.nil?
-			@producer = @session.create_producer(@session.create_destination(:topic_name => @topic_name))
+		if (@pub_sub)
+			@producer = @session.create_producer(@session.create_destination(:topic_name => @destination))
 		else
-			@producer = @session.create_producer(@session.create_destination(:queue_name => @queue_name))
+			@producer = @session.create_producer(@session.create_destination(:queue_name => @destination))
 		end
 
 		if !@delivery_mode.nil?
