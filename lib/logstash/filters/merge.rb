@@ -16,6 +16,7 @@ class LogStash::Filters::Merge < LogStash::Filters::Base
 
 
   def register
+    @threadsafe = false
     @logger.debug("registering")
     @merges = []
   end
@@ -36,16 +37,17 @@ class LogStash::Filters::Merge < LogStash::Filters::Base
 
     if (( order == "first" )) 
        @logger.debug(["merge", key, "First Event for key", order ])
-       $firstEventHash[key] = event
+       $firstEventHash[key] = { :key => key, :order => order, :event => event }
     elsif (( order == "last" ))
        @logger.debug(["merge", key, "Second Event for key", order])
-      $secondEventHash[key] = event
+       $secondEventHash[key] = { :key => key, :order => order, :event => event }
     end
     if $firstEventHash.include?(key) && $secondEventHash.include?(key) 
       time_delta = within_period(key) 
       if !time_delta.nil? then
-        @logger.debug(["merge", key, "within period"])
-        trigger(key, time_delta)
+        @logger.debug(["merge", key, "within period", $firstEventHash[key][:key], $secondEventHash[key][:key], $secondEventHash[key][:time_delta]])
+        trigger(key)
+        filter_matched(event)
       else
         @logger.debug(["merge", key, "ignoring (not in period)"])
       end
@@ -58,45 +60,47 @@ class LogStash::Filters::Merge < LogStash::Filters::Base
     new_events = @merges
     @merges =[]
     new_events
-
-#    return [new_events]
   end
 
   private
-
-  def first_event(event)
-    @logger.debug(["merge", key, "start_period"])
-    $keyList[key] = event
-  end
-
-  def trigger(key, time_delta)
+  def trigger(key)
+    
+    firstEvent = $firstEventHash[key]
+    secondEvent = $secondEventHash[key]
     @logger.debug(["merge", key, "trigger"])
     new_events = LogStash::Event.new
     new_events["source"] = Socket.gethostname
-    new_events["tags"] = [@add_tag]
-    new_events["merge.time_delta"] = time_delta
-    new_events.append($firstEventHash[key])
-    new_events.append($secondEventHash[key])
-    new_events["@timestamp"] = $firstEventHash[key]["@timestamp"]
-    @logger.debug(["merge", key, "newEvent"])
+    new_events["merge.key"] = secondEvent[:key]
+    new_events["merge.time_delta"] = secondEvent[:time_delta]
+    firstEvent[:event].to_hash.each do |key, value|
+      new_events[key] = value
+    end
+    secondEvent[:event].to_hash.each do |key, value|
+      if new_events[key].nil? 
+        new_events[key] = value
+      elsif  (( ![ "@timestamp", "tags", "@version" ].include?(key) && new_events[key] != value )) 
+        new_events["#{key}-2"] = value
+      end
+    end
+    new_events["@timestamp"] = secondEvent[:event]["@timestamp"]
+    @logger.debug(["merge",  firstEvent[:key], secondEvent[:key], "newEvent"])
     $firstEventHash.delete(key)
     $secondEventHash.delete(key)
     @merges << new_events
+    new_events = nil
     
   end
 
-  def followed_by_tags_match(event)
-    @logger.debug(["merge", key, "tags", event["tags"], @followed_by_tags])
-    (event["tags"] & @followed_by_tags).size == @followed_by_tags.size
-  end
 
   def within_period(key)
-    firstEvent = $firstEventHash[key]
-    secondEvent = $secondEventHash[key]
+    firstEvent = $firstEventHash[key][:event]
+    secondEvent = $secondEventHash[key][:event]
     time_delta = secondEvent["@timestamp"] - firstEvent["@timestamp"]
     @logger.debug(["merge", key, time_delta, "time_delta", firstEvent["@timestamp"], "first", secondEvent["@timestamp"], "second"])
     if time_delta >= 0 && time_delta <= @period then
-      return time_delta
+      $firstEventHash[key].merge!({ :time_delta => time_delta })
+      $secondEventHash[key].merge!({ :time_delta => time_delta })
+      return true
     else
       return nil
     end
