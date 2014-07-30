@@ -41,6 +41,12 @@ class LogStash::Filters::DynGrep < LogStash::Filters::Base
   #
   config :refresh_interval, :validate => :number, :default => 300
 
+  # The field's content must be the same as one of the patterns. 
+  # The default is false: it must contain a pattern as substring
+  #
+  config :fullmatch, :validate => :boolean, :default => false
+
+
   public
   def register
     @patterns = load_patterns(true)
@@ -87,9 +93,16 @@ class LogStash::Filters::DynGrep < LogStash::Filters::Base
       matches = 0
       source = event[@field].is_a?(Array) ? event[@field].first.to_s : event[@field].to_s
       @patterns.each do |pattern|
-        if source.include? pattern
-          matches = 1
-          break
+        if @fullmatch
+          if source == pattern
+            matches = 1
+            break
+          end
+        else
+          if source.include? pattern
+            matches = 1
+            break
+          end
         end
       end
       if matches > 0
