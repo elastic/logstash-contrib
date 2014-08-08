@@ -25,43 +25,47 @@ class LogStash::Filters::Merge < LogStash::Filters::Base
 
   def filter(event)
     return unless filter?(event)
-    order = event.sprintf(@order)
-    if $firstEventHash.nil? then
-      @logger.debug(["merge", "New KeyList"])
-      $firstEventHash = Hash.new
-    end
-    if $secondEventHash.nil? then
-      @logger.debug(["merge", "New KeyList"])
-      $secondEventHash = Hash.new
-    end
-    @filter_match=true
-    @key.each do |key|
-      key = event.sprintf(key)
-      @logger.debug(["merge", key, "key loop"])
-      if (( order == "first" )) 
-        @logger.debug(["merge", key, "First Event for key", order ])
-        $firstEventHash[key] = { :key => key, :order => order, :event => event, :period => @period , :merge_tag => @merge_tag}
-      elsif (( order == "last" ))
-        @logger.debug(["merge", key, "Second Event for key", order])
-        $secondEventHash[key] = { :key => key, :order => order, :event => event, :merge_tag => @merge_tag}
-      else
-        @logger.debug(["merge", @key, order, "If you see this, your config is wrong. -- 'order'"])
-        @filter_match = nil
+    begin 
+      order = event.sprintf(@order)
+      if $firstEventHash.nil? then
+        @logger.debug(["merge", "New KeyList"])
+        $firstEventHash = Hash.new
       end
-      if !@filter_match.nil? 
-        @logger.debug(["merge", key, @filter_match, order, "filter_matched"])
-        filter_matched(event)
-        @filter_match=nil
+      if $secondEventHash.nil? then
+        @logger.debug(["merge", "New KeyList"])
+        $secondEventHash = Hash.new
       end
-      if $firstEventHash.include?(key) && $secondEventHash.include?(key) 
-        time_delta = within_period(key) 
-        if !time_delta.nil? then
-          @logger.debug(["merge", key, "within period", $firstEventHash[key][:key], $secondEventHash[key][:key], $secondEventHash[key][:time_delta]])
-          trigger(key)
+      @filter_match=true
+      @key.each do |key|
+        key = event.sprintf(key)
+        @logger.debug(["merge", key, "key loop"])
+        if (( order == "first" )) 
+          @logger.debug(["merge", key, "First Event for key", order ])
+          $firstEventHash[key] = { :key => key, :order => order, :event => event, :period => @period , :merge_tag => @merge_tag}
+        elsif (( order == "last" ))
+          @logger.debug(["merge", key, "Second Event for key", order])
+          $secondEventHash[key] = { :key => key, :order => order, :event => event, :merge_tag => @merge_tag}
         else
-          @logger.debug(["merge", @key, "ignoring (not in period)"])
+          @logger.debug(["merge", key, order, "If you see this, your config is wrong. -- 'order'"])
+          @filter_match = nil
+        end
+        if !@filter_match.nil? 
+          @logger.debug(["merge", key, @filter_match, order, "filter_matched"])
+          filter_matched(event)
+          @filter_match=nil
+        end
+        if $firstEventHash.include?(key) && $secondEventHash.include?(key) 
+          time_delta = within_period(key) 
+          if !time_delta.nil? then
+            @logger.debug(["merge", key, "within period", $firstEventHash[key][:key], $secondEventHash[key][:key], $secondEventHash[key][:time_delta]])
+            trigger(key)
+          else
+            @logger.debug(["merge", key, "ignoring (not in period)"])
+          end
         end
       end
+    rescue
+      @logger.error(["merge", "Error has occured with", key])
     end
   end
 
