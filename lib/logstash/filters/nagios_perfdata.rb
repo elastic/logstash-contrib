@@ -32,13 +32,13 @@ class LogStash::Filters::NagiosPerfData < LogStash::Filters::Base
   #
   # filter {
   #   nagios_perfdata {
-  #     transmute => [ "nagios_serviceperfdata" ]
+  #     source => [ "nagios_serviceperfdata" ]
   #   }
   # }
   #
   # filter {
   #   nagios_perfdata {
-  #     transmute => [ "nagios_hostperfdata" ]
+  #     source => [ "nagios_hostperfdata" ]
   #   }
   # }
 
@@ -46,7 +46,7 @@ class LogStash::Filters::NagiosPerfData < LogStash::Filters::Base
 
   milestone 1
 
-  config :transmute, :validate => :string
+  config :source, :validate => :string
 
   public
   def register
@@ -74,7 +74,7 @@ class LogStash::Filters::NagiosPerfData < LogStash::Filters::Base
     # the translated value concatenated with the second captured parens
     # value to metrics array
 
-    event[@transmute].scan(/([^=]*)=(\S*)(\s+)?/) { |x, y| metrics.push("#{x.gsub("\s", ':::')}=#{y}") }
+    event[@source].scan(/([^=]*)=(\S*)(\s+)?/) { |x, y| metrics.push("#{x.gsub("\s", ':::')}=#{y}") }
 
     metrics = metrics.join(" ")
 
@@ -107,11 +107,11 @@ class LogStash::Filters::NagiosPerfData < LogStash::Filters::Base
       # label and value are not optional
 
       if a[0].nil? or is_empty(a[0])
-        raise "failed to parse the label from #{@transmute}"
+        raise "failed to parse the label from #{@source}"
       end
 
       if a[1].nil? or is_empty(a[1])
-        raise "failed to parse the value after parsing the label from #{@transmute}"
+        raise "failed to parse the value after parsing the label from #{@source}"
       end
 
       # String to float where applicable
