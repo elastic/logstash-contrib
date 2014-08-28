@@ -44,26 +44,26 @@
 # An example of configuration can be:
 #
 #   filter {
-#   grok {
-#     match => ["message", "%{TIMESTAMP_ISO8601} START id: (?<task_id>.*)"]
-#     add_tag => [ "event_start" ]
-#   }
+#     grok {
+#       match => ["message", "%{TIMESTAMP_ISO8601} START id: (?<task_id>.*)"]
+#       add_tag => [ "event_start" ]
+#     }
 #
-#   grok {
-#     match => ["message", "%{TIMESTAMP_ISO8601} END id: (?<task_id>.*)"]
-#     add_tag => [ "event_end"]
-#   }
+#     grok {
+#       match => ["message", "%{TIMESTAMP_ISO8601} END id: (?<task_id>.*)"]
+#       add_tag => [ "event_end"]
+#     }
 #
-#   grok {
-#     match => ["message", "%{TIMESTAMP_ISO8601} OTHEREND id: (?<task_id>.*)"]
-#     add_tag => [ "event_end"]
-#   }
+#     grok {
+#       match => ["message", "%{TIMESTAMP_ISO8601} OTHEREND id: (?<task_id>.*)"]
+#       add_tag => [ "event_end"]
+#     }
 #
-##   lazyelapsed {
-#     start_tag => "event_start"
-#     end_tag => "event_end"
-#     unique_id_field => "task_id"
-#     timestamp_field => "@timestamp"
+##    lazyelapsed {
+#       start_tag => "event_start"
+#       end_tag => "event_end"
+#       unique_id_field => "task_id"
+#       timestamp_field => "@timestamp"
 #     }
 #   }
 #
@@ -146,6 +146,7 @@ class LogStash::Filters::LazyElapsed < LogStash::Filters::Base
           end
         else
           # End event with no start. Just ignore.
+          @logger.debug("LazyElapsed: End event with no start. Ignoring the event.")
         end
       end
     end
@@ -176,6 +177,7 @@ class LogStash::Filters::LazyElapsed < LogStash::Filters::Base
                 start_time = Time.parse(element.start[@timestamp_field])
               rescue
                 start_time = Time.now # Set it to something?
+                @logger.debug("LazyElapsed: Couldn't parse timestamp string. Setting start_time to now.")
               end
             end
 
@@ -186,6 +188,7 @@ class LogStash::Filters::LazyElapsed < LogStash::Filters::Base
                 end_time = Time.parse(element.end[@timestamp_field])
               rescue
                 end_time = start_time # Will result in an 0 if we can't parse end time.
+                @logger.debug("LazyElapsed: Couldn't parse timestamp string. Setting end_time to start_time.")
               end
             end
 
