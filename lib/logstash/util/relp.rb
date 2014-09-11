@@ -4,7 +4,7 @@ require "socket"
 class Relp#This isn't much use on its own, but gives RelpServer and RelpClient things
 
   RelpVersion = '0'#TODO: spec says this is experimental, but rsyslog still seems to exclusively use it
-  RelpSoftware = 'logstash,1.1.1,http://logstash.net'
+  RelpSoftware = 'logstash,1.4.1,http://logstash.net'
 
   class RelpError < StandardError; end
   class InvalidCommand < RelpError; end
@@ -53,7 +53,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       #for some reason it seems to take 2 writes after the server closes the
       #connection before we get an exception
       socket.write("\n")
-    rescue Errno::EPIPE,IOError,Errno::ECONNRESET#TODO: is this sufficient to catch all broken connections?
+    rescue IOError,Errno::EPIPE,Errno::ECONNRESET#TODO: is this sufficient to catch all broken connections?
       raise ConnectionClosed
     end
     return frame['txnr'].to_i
@@ -75,7 +75,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         frame['message'] = socket.read(frame['datalen'])
       end
       @logger.debug? and @logger.debug("Read frame", :frame => frame)
-    rescue EOFError,Errno::ECONNRESET,IOError
+    rescue EOFError,IOError,Errno::ECONNRESET
       raise ConnectionClosed
     end
     if ! self.valid_command?(frame['command'])#TODO: is this enough to catch framing errors?
@@ -226,7 +226,13 @@ class RelpClient < Relp
     #These are extra commands that we require, otherwise refuse the connection
     @required_relp_commands = required_commands
 
-    @socket=TCPSocket.new(host,port)
+    begin
+      @socket=TCPSocket.new(host,port)
+    rescue IOError,Errno::ECONNREFUSED
+      @logger.error("Could not start RELP client: Connection refused",
+                    :host => host, :port => port)
+      raise ConnectionClosed
+    end
 
     #This'll start the automatic frame numbering 
     @lasttxnr = 0
