@@ -77,6 +77,7 @@ require "zlib"
 #      deleter_interval_secs => 60                               (optional)
 #      gzip => false                                             (optional)
 #      maxbadrecords => 99                                       (optional)
+#      chunk_size => 1048576  (1MB)                              (optional) 
 #    }
 # }
 #
@@ -143,6 +144,9 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
 
   # MaxBadRecords sets the maximum number of bad records before the load job fails
   config :maxbadrecords, :validate => :number, :default => 99
+
+  # Chunk_size sets the buffer size of parsed logs to be read, default set to 10MB (10485760)
+  config :chunk_size, :validate => :number, :default => 1048576
 
   public
   def register
@@ -365,10 +369,12 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
             zfilename = filename+'.gz'
             @logger.debug("GZIP: compressing file to",
                           :filename => zfilename)
-            Zlib::GzipWriter.open(zfilename) do |gz|
+            File.open(zfilename, 'w') do |d|
+              gz = Zlib::GzipWriter.new(d)
               gz.mtime = File.mtime(filename)
               gz.orig_name = filename
-              gz.write IO.binread(filename)
+              open(filename, "rb") do |f| f.each_chunk() {|chunk| gz.write chunk } end
+              gz.close
             end
             job_id = upload_object(zfilename)
           else
@@ -610,6 +616,12 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
         retry
       end
     end
+  end
+end
+
+class File
+  def each_chunk(chunk_size=@chunk_size)
+    yield read(chunk_size) until eof?
   end
 end
 
