@@ -41,6 +41,14 @@ class LogStash::Outputs::Relp < LogStash::Outputs::Base
     return RelpClient.new(@host, @port, ['syslog'], 128, @retry_delay)
   end # def connect
 
+  protected
+  def close
+    begin
+      return @relp_client.close rescue nil
+    rescue Relp::ConnectionClosed, IOError => e
+    end
+  end # def close
+
   public
   def register
     @codec.on_event do |event|
@@ -51,32 +59,26 @@ class LogStash::Outputs::Relp < LogStash::Outputs::Base
         @logger.warn("Failed to send event to RelpServer", :event => event, :exception => e,
                      :backtrace => e.backtrace)
 
-        begin
-          @relp_client.close rescue nil
-        rescue Relp::ConnectionClosed, IOError => e
-        end
+        close
 
         @relp_client = nil
         sleep @retry_delay
         retry
       rescue Relp::InvalidCommand,Relp::InappropriateCommand => e
-        @logger.warn('Relp server trying to open connection with something other than open:'+e.message)
+        @logger.error('Relp server trying to open connection with something other than open:'+e.message)
         raise
       rescue Relp::InsufficientCommands
-        @logger.warn('Relp server incapable of syslog')
+        @logger.error('Relp server incapable of syslog')
         raise
       rescue Relp::RelpError => e
-        @logger.warn('Relp error: '+e.class.to_s+' '+e.message)
+        @logger.error('Relp error: '+e.class.to_s+' '+e.message)
         raise
       end
     end
   end # def register
 
   def teardown
-    begin
-      @relp_client.close rescue nil
-    rescue Relp::ConnectionClosed, IOError => e
-    end
+    close
   end # def teardown
 
   public
