@@ -43,10 +43,14 @@ class LogStash::Outputs::Relp < LogStash::Outputs::Base
 
   protected
   def close
-    begin
-      return @relp_client.close rescue nil
-    rescue Relp::ConnectionClosed, IOError => e
+    if !@relp_client.nil?
+      begin
+        return @relp_client.close
+      rescue Relp::ConnectionClosed, IOError => e
+      end
     end
+
+    return nil
   end # def close
 
   public
@@ -54,15 +58,28 @@ class LogStash::Outputs::Relp < LogStash::Outputs::Base
     @codec.on_event do |event|
       begin
         @relp_client = connect unless @relp_client
+
+        if !@missed_messages.nil?  
+          # check for missed messages
+          @missed_messages.each do |txnr, message|
+            @logger.warn("Retry missed message", :missed_message => message['message'])
+
+            @relp_client.syslog_write(message['message'])
+            @missed_messages.delete(txnr)
+          end
+
+          @missed_messages = nil
+        end
+
         @relp_client.syslog_write(event)
       rescue Relp::ConnectionClosed, IOError => e
         @logger.warn("Failed to send event to RelpServer", :event => event, :exception => e,
                      :backtrace => e.backtrace)
 
-        close
-
+        # close will sleep @retry_delay
+        @missed_messages = close
         @relp_client = nil
-        sleep @retry_delay
+
         retry
       rescue Relp::InvalidCommand,Relp::InappropriateCommand => e
         @logger.error('Relp server trying to open connection with something other than open:'+e.message)
@@ -87,4 +104,4 @@ class LogStash::Outputs::Relp < LogStash::Outputs::Base
 
     @codec.encode(event)
   end # def receive
-end # class LogStash::Outputs::Mongodb
+end # class LogStash::Outputs::Relp

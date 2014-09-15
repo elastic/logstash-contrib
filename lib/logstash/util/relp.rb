@@ -291,7 +291,13 @@ class RelpClient < Relp
       loop do
         #This returns old txnrs that are still present
         (@buffer.keys & old_buffer.keys).each do |txnr|
-          new_txnr = self.frame_write(@socket, @buffer[txnr])
+          begin
+            new_txnr = self.frame_write(@socket, @buffer[txnr])
+          rescue ConnectionClosed => e
+            ## ignore this error, connection was closed and still missing replies are returned by close
+            break
+          end
+
           @buffer[new_txnr] = @buffer[txnr]
           @buffer.delete(txnr)
         end
@@ -303,12 +309,17 @@ class RelpClient < Relp
 
   #TODO: have a way to get back unacked messages on close
   def close
-    frame = Hash.new
-    frame['command'] = 'close'
-    @close_txnr=self.frame_write(@socket, frame)
+    begin
+      frame = Hash.new
+      frame['command'] = 'close'
+      @close_txnr=self.frame_write(@socket, frame)
+    rescue ConnectionClosed => e
+    end
+
     #TODO: ought to properly wait for a reply etc. The serverclose will make it work though
     sleep @retransmission_timeout
     @socket.close#TODO: shutdown?
+
     return @buffer
   end
 
