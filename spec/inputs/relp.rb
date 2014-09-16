@@ -3,7 +3,7 @@ require "test_utils"
 require "socket"
 require "logstash/util/relp"
 
-describe "inputs/relp" do
+describe "inputs/relp", :socket => true do
   extend LogStash::RSpec
 
   describe "Single client connection" do
