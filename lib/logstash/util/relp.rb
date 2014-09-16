@@ -273,7 +273,13 @@ class RelpClient < Relp
           @buffer.delete(f['txnr'])
         elsif f['command'] == 'rsp' && f['message'][0,1] == '5'
           #TODO: What if we get an error for something we're already retransmitted due to timeout?
-          new_txnr = self.frame_write(@socket, @buffer[f['txnr']])
+          begin
+            new_txnr = self.frame_write(@socket, @buffer[f['txnr']])
+          rescue ConnectionClosed => e
+            ## ignore this error
+            break
+          end
+
           @buffer[new_txnr] = @buffer[f['txnr']]
           @buffer.delete(f['txnr'])
         elsif f['command'] == 'serverclose' || f['txnr'] == @close_txnr
