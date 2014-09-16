@@ -36,6 +36,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       #Only allow txnr to be 0 or be determined automatically
       frame['txnr'] = self.nexttxnr() unless frame['txnr']==0
     end
+
     frame['txnr'] = frame['txnr'].to_s
     frame['message'] = '' if frame['message'].nil?
     frame['datalen'] = frame['message'].length.to_s
@@ -44,7 +45,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       frame['command'],
       frame['datalen'],
       frame['message']
-    ].join(' ').strip
+    ].join(' ')
     begin
       @logger.debug? and @logger.debug("Writing to socket", :data => wiredata)
       socket.write(wiredata)
@@ -53,7 +54,8 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       #for some reason it seems to take 2 writes after the server closes the
       #connection before we get an exception
       socket.write("\n")
-    rescue IOError,Errno::EPIPE,Errno::ECONNRESET#TODO: is this sufficient to catch all broken connections?
+    rescue IOError,Errno::EPIPE,Errno::ECONNRESET => e#TODO: is this sufficient to catch all broken connections?
+      @logger.warn? and @logger.warn("Error while writing frame", :exception => e, :backtrace => e.backtrace)
       raise ConnectionClosed
     end
     return frame['txnr'].to_i
@@ -62,8 +64,8 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
   def frame_read(socket)
     begin
       frame = Hash.new
-      frame['txnr'] = socket.readline(' ').strip.to_i
-      frame['command'] = socket.readline(' ').strip
+      frame['txnr'] = socket.readline(' ').rstrip.to_i
+      frame['command'] = socket.readline(' ').rstrip
 
       #Things get a little tricky here because if the length is 0 it is not followed by a space.
       leading_digit=socket.read(1)
@@ -71,11 +73,13 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         frame['datalen'] = 0
         frame['message'] = ''
       else
-        frame['datalen'] = (leading_digit + socket.readline(' ')).strip.to_i
+        frame['datalen'] = (leading_digit + socket.readline(' ')).rstrip.to_i
         frame['message'] = socket.read(frame['datalen'])
+        socket.read(1) #read newline at the end
       end
       @logger.debug? and @logger.debug("Read frame", :frame => frame)
-    rescue EOFError,IOError,Errno::ECONNRESET
+    rescue EOFError,IOError,Errno::EPIPE,Errno::ECONNRESET => e#TODO: is this sufficient to catch all broken connections?
+      @logger.warn? and @logger.warn("Error while reading frame", :exception => e, :backtrace => e.backtrace)
       raise ConnectionClosed
     end
     if ! self.valid_command?(frame['command'])#TODO: is this enough to catch framing errors?
