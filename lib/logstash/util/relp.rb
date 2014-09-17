@@ -54,7 +54,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       #for some reason it seems to take 2 writes after the server closes the
       #connection before we get an exception
       socket.write("\n")
-    rescue IOError,Errno::EPIPE,Errno::ECONNRESET => e#TODO: is this sufficient to catch all broken connections?
+    rescue IOError,Errno::EPIPE,Errno::EBADF,Errno::ECONNRESET => e
       @logger.warn? and @logger.warn("Error while writing frame", :exception => e, :backtrace => e.backtrace)
       raise ConnectionClosed
     end
@@ -78,7 +78,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         socket.read(1) #read newline at the end
       end
       @logger.debug? and @logger.debug("Read frame", :frame => frame)
-    rescue EOFError,IOError,Errno::EPIPE,Errno::ECONNRESET => e#TODO: is this sufficient to catch all broken connections?
+    rescue EOFError,IOError,Errno::EPIPE,Errno::EBADF,Errno::ECONNRESET => e
       @logger.warn? and @logger.warn("Error while reading frame", :exception => e, :backtrace => e.backtrace)
       raise ConnectionClosed
     end
@@ -272,7 +272,13 @@ class RelpClient < Relp
     #This thread deals with responses that come back
     reader = Thread.start do
       loop do
-        f = self.frame_read(@socket)
+        begin
+          f = self.frame_read(@socket)
+        rescue ConnectionClosed => e
+          ## ignore this error
+          break
+        end
+
         if f['command'] == 'rsp' && f['message'] == '200 OK'
           @buffer.delete(f['txnr'])
         elsif f['command'] == 'rsp' && f['message'][0,1] == '5'
