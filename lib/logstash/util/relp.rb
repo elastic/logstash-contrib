@@ -325,9 +325,10 @@ class RelpClient < Relp
 
   #TODO: have a way to get back unacked messages on close
   def close
+    frame = Hash.new
+    frame['command'] = 'close'
+
     begin
-      frame = Hash.new
-      frame['command'] = 'close'
       @close_txnr=self.frame_write(@socket, frame)
     rescue ConnectionClosed => e
     end
