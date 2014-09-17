@@ -307,14 +307,19 @@ class RelpClient < Relp
       loop do
         #This returns old txnrs that are still present
         (@buffer.keys & old_buffer.keys).each do |txnr|
+          current_txnr = @buffer[txnr]
+          if current_txnr.nil?
+            next # vanished since start of active loop round
+          end
+
           begin
-            new_txnr = self.frame_write(@socket, @buffer[txnr])
+            new_txnr = self.frame_write(@socket, current_txnr)
           rescue ConnectionClosed => e
             ## ignore this error, connection was closed and still missing replies are returned by close
             break
           end
 
-          @buffer[new_txnr] = @buffer[txnr]
+          @buffer[new_txnr] = current_txnr
           @buffer.delete(txnr)
         end
         old_buffer = @buffer
