@@ -33,7 +33,7 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
   def check_conf(conf_hash,file_conf)
     #Check required parameters
     @logger.debug("Check that required parameters are define with good types in #{conf_hash}")
-    parameter = {'host' => 'String'.class, 'port' => 1.class, 'queries' => [].class}
+    parameter = {'url' => 'String'.class, 'queries' => [].class}
     parameter.each_key do |param|
       if conf_hash.has_key?(param)
         unless conf_hash[param].instance_of?(parameter[param])
@@ -100,6 +100,17 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
     r_alias_object
   end
 
+  private 
+  def break_url(url)
+    return url.match(/jndi\/rmi:\/\/(?<host>\S+).*:(?<port>\S+)\/(?<path>\S+)/)
+  end
+
+  private
+  def extract_from_url(url, key)                                                                   
+    result = break_url(url)
+    result.nil? ? "" : result[key]                                                   
+  end    
+
   private
   def send_event_to_queue(queue,host,metric_path,metric_value)
     @logger.debug('Send event to queue to be processed by filters/outputs')
@@ -136,18 +147,23 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
         @logger.debug('Wait config to retrieve from queue conf')
         thread_hash_conf = queue_conf.pop
         @logger.debug("Retrieve config #{thread_hash_conf} from queue conf")
+        url = thread_hash_conf['url']
+        host = extract_from_url(url, "host")
+        port = extract_from_url(url, "port")
+        username = thread_hash_conf['username']
+        password =thread_hash_conf['password']
+
 
         @logger.debug('Check if jmx connection need a user/password')
-        if thread_hash_conf.has_key?('username') and thread_hash_conf.has_key?('password')
-          @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']} with user #{thread_hash_conf['username']}")
-          jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
-                                                 :port => thread_hash_conf['port'],
-                                                 :username => thread_hash_conf['username'],
-                                                 :password => thread_hash_conf['password']
+        if url && username && password
+          @logger.debug("Creating connection to #{url} with user #{username}")
+          jmx_connection = JMX::MBean.create_connection :url => url, :username => username,  :password => password
+        elsif url
+          @logger.debug("Creating connection to #{url}")
+          jmx_connection = JMX::MBean.create_connection :url => url
         else
-          @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']}")
-          jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
-                                                 :port => thread_hash_conf['port']
+          @logger.debug("Creating default JMX connection")
+          jmx_connection = JMX::MBean.create_connection 
         end
 
 
@@ -155,8 +171,8 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
           @logger.debug("Set base_metric_path to alias: #{thread_hash_conf['alias']}")
           base_metric_path = thread_hash_conf['alias']
         else
-          @logger.debug("Set base_metric_path to host_port: #{thread_hash_conf['host']}_#{thread_hash_conf['port']}")
-          base_metric_path = "#{thread_hash_conf['host']}_#{thread_hash_conf['port']}"
+          @logger.debug("Set base_metric_path to host_port: #{host}_#{port}")
+          base_metric_path = "#{host}_#{port}"
         end
 
 
@@ -184,11 +200,11 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
                       @logger.debug('The jmx value is a composite_data one')
                       jmx_attribute_value.each do |jmx_attribute_value_composite|
                         @logger.debug("Get jmx value #{jmx_attribute_value[jmx_attribute_value_composite]} for attribute #{attribute}.#{jmx_attribute_value_composite} to #{jmx_object_name.object_name}")
-                        send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{attribute}.#{jmx_attribute_value_composite}", jmx_attribute_value[jmx_attribute_value_composite])
+                        send_event_to_queue(queue, host, "#{base_metric_path}.#{object_name}.#{attribute}.#{jmx_attribute_value_composite}", jmx_attribute_value[jmx_attribute_value_composite])
                       end
                     else
                       @logger.debug("Get jmx value #{jmx_attribute_value} for attribute #{attribute} to #{jmx_object_name.object_name}")
-                      send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{attribute}", jmx_attribute_value)
+                      send_event_to_queue(queue, host, "#{base_metric_path}.#{object_name}.#{attribute}", jmx_attribute_value)
                     end
                   rescue Exception => ex
                     @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}")
@@ -204,11 +220,11 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
                       @logger.debug('The jmx value is a composite_data one')
                       jmx_attribute_value.each do |jmx_attribute_value_composite|
                         @logger.debug("Get jmx value #{jmx_attribute_value[jmx_attribute_value_composite]} for attribute #{jmx_object_name.attributes[attribute]}.#{jmx_attribute_value_composite} to #{jmx_object_name.object_name}")
-                        send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}.#{jmx_attribute_value_composite}", jmx_attribute_value[jmx_attribute_value_composite])
+                        send_event_to_queue(queue, host, "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}.#{jmx_attribute_value_composite}", jmx_attribute_value[jmx_attribute_value_composite])
                       end
                     else
                       @logger.debug("Get jmx value #{jmx_attribute_value} for attribute #{jmx_object_name.attributes[attribute]} to #{jmx_object_name.object_name}")
-                      send_event_to_queue(queue, thread_hash_conf['host'], "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}", jmx_attribute_value)
+                      send_event_to_queue(queue, host, "#{base_metric_path}.#{object_name}.#{jmx_object_name.attributes[attribute]}", jmx_attribute_value)
                     end
                   rescue Exception => ex
                     @logger.warn("Failed retrieving metrics for attribute #{attribute} on object #{jmx_object_name.object_name}")
