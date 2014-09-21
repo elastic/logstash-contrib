@@ -359,6 +359,11 @@ class RelpClient < Relp
   end
 
   def nexttxnr
+    # maximum txnr, next txnr is 1
+    if @lasttxnr >= 999999999
+      @lasttxnr = 0
+    end
+
     @lasttxnr += 1
   end
 
