@@ -29,7 +29,7 @@ require "shellwords"
 #          add_tag => [ "zabbix-sender" ]
 #          add_field => [
 #            "zabbix_host", "%{source_host}",
-#            "zabbix_item", "item.key"
+#            "zabbix_item", "item.key",
 #            "send_field", "field_name"
 #          ]
 #       }
