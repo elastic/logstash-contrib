@@ -35,8 +35,9 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
   public
   def register
     require "mongo"
-    uriParsed=Mongo::URIParser.new(@uri)
-    conn = uriParsed.connection({})
+    #uriParsed=Mongo::URIParser.new(@uri)
+    #conn = uriParsed.connection({})
+    conn = Mongo::MongoShardedClient.from_uri(@uri, options = {})
     if uriParsed.auths.length > 0
       uriParsed.auths.each do |auth|
         if !auth['db_name'].nil?
