@@ -1,4 +1,3 @@
-
 # Author: Rodrigo De Castro <rdc@google.com>
 # Date: 2013-09-20
 #
@@ -75,6 +74,9 @@ require "logstash/namespace"
 #      flush_interval_secs => 2                                  (optional)
 #      uploader_interval_secs => 60                              (optional)
 #      deleter_interval_secs => 60                               (optional)
+#      gzip => false                                             (optional)
+#      maxbadrecords => 99                                       (optional)
+#      table_expirationTime => "2d"                              (optional)
 #    }
 # }
 #
@@ -132,9 +134,18 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
   # around one hour).
   config :uploader_interval_secs, :validate => :number, :default => 60
 
+  # Gzip output stream when writing events to log files
+  config :gzip, :validate => :boolean, :default => false
+
   # Deleter interval when checking if upload jobs are done for file deletion.
   # This only affects how long files are on the hard disk after the job is done.
   config :deleter_interval_secs, :validate => :number, :default => 60
+
+  # MaxBadRecords sets the maximum number of bad records before the load job fails
+  config :maxbadrecords, :validate => :number, :default => 99
+
+  # table_lifecycle sets the expirationTime key, Expired tables will be deleted and their storage reclaimed
+  config :table_expirationTime, :validate => :string, :default => false
 
   public
   def register
@@ -199,7 +210,13 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       # so flushing it before.
       @temp_file.fsync()
       @temp_file.close()
-      initialize_next_log()
+      if @temp_file.closed?
+        initialize_next_log()
+      else
+        @temp_file.fsync()
+        @temp_file.close()
+        initialize_next_log()
+      end
     end
 
     @temp_file.write(message)
@@ -270,7 +287,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
         delete_item = @delete_queue.pop
         job_id = delete_item["job_id"]
         filename = delete_item["filename"]
-        job_status = get_job_status(job_id)
+        job_status = get_job_status(job_id, filename)
         case job_status["state"]
         when "DONE"
           if job_status.has_key?("errorResult")
@@ -285,7 +302,24 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
                           :job_id => job_id,
                           :filename => filename,
                           :job_status => job_status)
-            File.delete(filename)
+            if @gzip 
+              if File.exist?(filename)
+                File.delete(filename)
+              else
+                @logger.debug("File does not exist")
+              end
+              if File.exist?(filename+'.gz')
+                File.delete(filename+'.gz')
+              else
+                @logger.debug("ziped file does not exist")
+              end
+            else
+              if File.exist?(filename)
+                File.delete(filename)
+              else
+                @logger.debug("File does not exist")
+              end
+            end
           end
         when "PENDING", "RUNNING"
           @logger.debug("BQ: job is not done, NOT deleting local file yet.",
@@ -337,15 +371,26 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
             end
           end
         end
-
-        if File.size(filename) > 0
-          job_id = upload_object(filename)
+        if File.exist?(filename) and File.size(filename) > 0
+          if @gzip
+            zfilename = filename+'.gz'
+            @logger.debug("GZIP: compressing file to",
+                          :filename => zfilename)
+            gz = system( "gzip ", filename)
+            job_id = upload_object(zfilename)
+          else
+            job_id = upload_object(filename)
+          end
           @delete_queue << { "filename" => filename, "job_id" => job_id }
         else
           @logger.debug("BQ: skipping empty file.")
           @logger.debug("BQ: delete local temporary file ",
                         :filename => filename)
-          File.delete(filename)
+          if File.exist?(filename)
+            File.delete(filename)
+          else
+            @logger.debug("File does not exist")
+          end
         end
 
         sleep @uploader_interval_secs
@@ -359,6 +404,28 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
   def get_undated_path
     return @temp_directory + File::SEPARATOR + @temp_file_prefix + "_" +
       Socket.gethostname()
+  end
+
+  ##
+  # Return the epoch time for setting the experitionTime of table rotation
+  # Gets the user configured value and converts it to epoch (unix) time
+  def get_expirationTime
+    if (@table_expirationTime.split(/[\d]/).last.length != 1 || @table_expirationTime.split(/[^\d]/).last.length == 0)
+      raise "BigQuery table_expirationTime value should be: <span><type> while type is y/m/w/d, such as 3M for 3 months"
+    end
+    t=DateTime.now
+    if (@table_expirationTime.split(/[\d]/).last == 'y')
+      t = t >> (12 * @table_expirationTime.split(/[^\d]/).last.to_i)
+    elsif (@table_expirationTime.split(/[\d]/).last == 'm')
+      t = t >> (@table_expirationTime.split(/[^\d]/).last.to_i)
+    elsif (@table_expirationTime.split(/[\d]/).last == 'w')
+      t = t + (@table_expirationTime.split(/[^\d]/).last.to_i * 7)
+    elsif (@table_expirationTime.split(/[\d]/).last == 'd')
+      t = t + (@table_expirationTime.split(/[^\d]/).last.to_i)
+    else 
+      raise "BigQuery table_expirationTime type is not supported, supported types are y/m/w/d"
+    end
+    return t.to_time.to_i
   end
 
   ##
@@ -378,7 +445,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
   ##
   # Returns date from a temporary log file name.
   def get_date_pattern(filename)
-    match = /^#{get_undated_path()}_(?<date>.*)\.part(\d+)\.log$/.match(filename)
+    match = /^#{get_undated_path()}_(?<date>.*)\.part(\d+)\.log.?g?z?$/.match(filename)
     return match[:date]
   end
 
@@ -466,7 +533,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
 
   ##
   # Uploads a local file to the configured bucket.
-  def get_job_status(job_id)
+  def get_job_status(job_id, filename)
     begin
       require 'json'
       @logger.debug("BQ: check job status.",
@@ -488,7 +555,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       contents = response["status"]
       return contents
     rescue => e
-      @logger.error("BQ: failed to check status", :exception => e)
+      @logger.error("BQ: failed to check status", :filename => filename, :exception => e)
       # TODO(rdc): limit retries?
       sleep 1
       retry
@@ -498,17 +565,75 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
   ##
   # Uploads a local file to the configured bucket.
   def upload_object(filename)
+    @logger.info("entering upload_object")
     begin
       require 'json'
+      datasetId = @project_id+":"+@dataset
+      verify_dataset = @client.execute(:api_method => @bq.datasets.get,
+                                       :parameters => {
+                                         'projectId' => @project_id,
+                                         'datasetId' => @dataset })
+      dataset_status = JSON.parse(verify_dataset.response.body)["id"]
+      if dataset_status != datasetId
+        @logger.info("BQ: Dataset doesnt exist, creating it instead")
+        create_dataset = @client.execute(:api_method => @bq.datasets.insert,
+                                          :parameters => { 'projectId' => @project_id },
+                                          :body_object => { 'id' => @dataset })
+        sleep 10
+      end
+
       table_id = @table_prefix + "_" + get_date_pattern(filename)
+
       # BQ does not accept anything other than alphanumeric and _
       # Ref: https://developers.google.com/bigquery/browser-tool-quickstart?hl=en
-      table_id = table_id.gsub!(':','_').gsub!('-', '_')
+      table_id = table_id.gsub(':','_').gsub('-', '_')
+      tableId = datasetId+"."+table_id
 
-      @logger.debug("BQ: upload object.",
+      verify_table = @client.execute(:api_method => @bq.tables.get,
+                                       :parameters => {
+                                         'projectId' => @project_id,
+                                         'datasetId' => @dataset,
+                                         'tableId' => table_id })
+
+      table_status = JSON.parse(verify_table.response.body)["id"]
+
+      if table_status != tableId
+        @logger.info("BQ: Table doesnt exist, creating it instead")
+        if @table_expirationTime
+          create_table = @client.execute(:api_method => @bq.tables.insert,
+                                            :parameters => { "projectId" => @project_id,
+                                              "datasetId" => @dataset },
+                                            :body_object => {
+                                              "tableReference" => {
+                                                "tableId" => table_id,
+                                                "projectId" => @project_id,
+                                                "datasetId" => @dataset},
+                                              "expirationTime" => get_expirationTime().to_s+"000",
+                                              "schema" => @json_schema
+                                              })
+          @logger.debug("BQ: Table creation sequence sent with expirationTime, link:")
+          sleep 10
+        else
+          create_table = @client.execute(:api_method => @bq.tables.insert,
+                                            :parameters => { "projectId" => @project_id,
+                                              "datasetId" => @dataset },
+                                            :body_object => {
+                                              "tableReference" => {
+                                                "datasetId" => @dataset,
+                                                "projectId" => @project_id,
+                                                "tableId" => table_id },
+                                              "schema" => @json_schema
+                                              })
+          @logger.debug("BQ: Table creation sequence sent, link")
+          sleep 10
+        end
+      end
+
+      @logger.info("BQ: upload object.",
                     :filename => filename,
                     :table_id => table_id)
       media = Google::APIClient::UploadIO.new(filename, "application/octet-stream")
+
       body = {
         "configuration" => {
           "load" => {
@@ -519,15 +644,25 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
               "datasetId" => @dataset,
               "tableId" => table_id
             },
-            'createDisposition' => 'CREATE_IF_NEEDED',
-            'writeDisposition' => 'WRITE_APPEND'
+            'createDisposition' => 'CREATE_NEVER',
+            'writeDisposition' => 'WRITE_APPEND',
+            'maxBadRecords' => @maxbadrecords
           }
         }
       }
+
+      @logger.debug("Execution details: ",
+                   :body_object => body,
+                   :parameters => {
+                     'uploadType' => 'resumable',
+                     'projectId' => @project_id
+                   },
+                  :media => media)
+ 
       insert_result = @client.execute(:api_method => @bq.jobs.insert,
                                       :body_object => body,
                                       :parameters => {
-                                        'uploadType' => 'multipart',
+                                        'uploadType' => 'resumable',
                                         'projectId' => @project_id
                                       },
                                       :media => media)
@@ -540,7 +675,12 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       @logger.error("BQ: failed to upload file", :exception => e)
       # TODO(rdc): limit retries?
       sleep 1
-      retry
+#     if (File.mtime(filename) + 60 > Time.now)
+#       File.delete(filename)
+#     end
+      #if File.exist?(filename)
+      #  retry     
+      #end
     end
   end
 end
