@@ -42,13 +42,13 @@ class LogStash::Outputs::InfluxDB < LogStash::Outputs::Base
   #
   # Events for the same series will be batched together where possible
   # Both keys and values support sprintf formatting
-  config :data_points, :validate => :hash, :default => {}, :required => true
+  config :data_points, :validate => :hash, :default => {}
 
   # Do not use data_points. Use keys / values found in event instead.
-  config :use_data_points, :validate => :boolean, :default => true
+  config :columns_from_event_fields, :validate => :boolean, :default => true
 
-  # Ignore some data_points if they are setted
-  config :ignore_data_points, :validate => :array, :default => []
+  # Ignore some columns if they are setted
+  config :ignore_columns, :validate => :array, :default => []
 
   # Allow the override of the `time` column in the event?
   #
@@ -132,7 +132,7 @@ class LogStash::Outputs::InfluxDB < LogStash::Outputs::Base
     # ]
     event_hash = {}
     event_hash['name'] = event.sprintf(@series)
-    if use_data_points
+    if @columns_from_event_fields
       sprintf_points = Hash[@data_points.map {|k,v| [event.sprintf(k), event.sprintf(v)]}]
     else
       sprintf_points = event.to_hash
@@ -142,7 +142,7 @@ class LogStash::Outputs::InfluxDB < LogStash::Outputs::Base
     else
       sprintf_points['time'] = to_epoch(event.timestamp)
     end
-    @ignore_data_points.each do |field|
+    @ignore_columns.each do |field|
       if sprintf_points.has_key?(field)
         sprintf_points.delete(field)
       end
