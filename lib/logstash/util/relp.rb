@@ -39,7 +39,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
 
     frame['txnr'] = frame['txnr'].to_s
     frame['message'] = '' if frame['message'].nil?
-    frame['datalen'] = frame['message'].length.to_s
+    frame['datalen'] = frame['message'].bytesize.to_s
     wiredata=[
       frame['txnr'],
       frame['command'],
