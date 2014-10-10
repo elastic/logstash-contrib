@@ -138,7 +138,7 @@ class LogStash::Filters::Aggregate < LogStash::Filters::Base
 			aggregate_maps_element = @@aggregate_maps[task_id]
 			if (aggregate_maps_element.nil?)
 				return if @map_action == "update"
-				aggregate_maps_element = LogStash::Filters::Aggregate::Element.new(event["@timestamp"]);
+				aggregate_maps_element = LogStash::Filters::Aggregate::Element.new(Time.now);
 				@@aggregate_maps[task_id] = aggregate_maps_element
 			else
 				return if @map_action == "create"
