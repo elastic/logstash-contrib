@@ -10,6 +10,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
   class InvalidCommand < RelpError; end
   class InappropriateCommand < RelpError; end
   class ConnectionClosed < RelpError; end
+  class FrameReadException < RelpError; end
   class InsufficientCommands < RelpError; end
 
   def valid_command?(command)
@@ -75,8 +76,10 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         frame['message'] = socket.read(frame['datalen'])
       end
       @logger.debug? and @logger.debug("Read frame", :frame => frame)
-    rescue EOFError,Errno::ECONNRESET,IOError
+    rescue Errno::ECONNRESET
       raise ConnectionClosed
+    rescue EOFError,IOError
+      raise FrameReadException
     end
     if ! self.valid_command?(frame['command'])#TODO: is this enough to catch framing errors?
       if self.server?
@@ -120,6 +123,11 @@ class RelpServer < Relp
 
   def accept
     socket = @server.accept
+    @logger.debug("New socket created")
+    return self, socket
+  end
+
+  def relp_setup_connection(socket)
     frame=self.frame_read(socket)
     if frame['command'] == 'open'
       offer=Hash[*frame['message'].scan(/^(.*)=(.*)$/).flatten]
@@ -153,7 +161,6 @@ class RelpServer < Relp
         response_frame['message'] += 'relp_software=' + RelpSoftware + "\n"
         response_frame['message'] += 'commands=' + @required_relp_commands.join(',')#TODO: optional ones
         self.frame_write(socket, response_frame)
-        return self, socket
       end
     else
       self.serverclose(socket)
