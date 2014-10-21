@@ -66,11 +66,12 @@ class LogStash::Inputs::Relp < LogStash::Inputs::Base
         Thread.start(@relp_server.accept) do |client|
             rs = client[0]
             socket = client[1]
+          begin
+            rs.relp_setup_connection(socket)
             # monkeypatch a 'peer' method onto the socket.
             socket.instance_eval { class << self; include ::LogStash::Util::SocketPeer end }
             peer = socket.peer
             @logger.debug("Relp Connection to #{peer} created")
-          begin
             relp_stream(rs,socket, output_queue, peer)
           rescue Relp::ConnectionClosed => e
             @logger.debug("Relp Connection to #{peer} Closed")
@@ -79,6 +80,8 @@ class LogStash::Inputs::Relp < LogStash::Inputs::Base
             #TODO: Still not happy with this, are they all warn level?
             #Will this catch everything I want it to?
             #Relp spec says to close connection on error, ensure this is the case
+          ensure
+            socket.close
           end
         end # Thread.start
       rescue Relp::InvalidCommand,Relp::InappropriateCommand => e
