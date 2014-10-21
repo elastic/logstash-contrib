@@ -81,7 +81,7 @@ class LogStash::Inputs::Relp < LogStash::Inputs::Base
             #Will this catch everything I want it to?
             #Relp spec says to close connection on error, ensure this is the case
           ensure
-            socket.close
+            socket.close rescue nil
           end
         end # Thread.start
       rescue Relp::InvalidCommand,Relp::InappropriateCommand => e

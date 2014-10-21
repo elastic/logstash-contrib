@@ -76,7 +76,9 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         frame['message'] = socket.read(frame['datalen'])
       end
       @logger.debug? and @logger.debug("Read frame", :frame => frame)
-    rescue EOFError,Errno::ECONNRESET,IOError
+    rescue Errno::ECONNRESET
+      raise ConnectionClosed
+    rescue EOFError,IOError
       raise FrameReadException
     end
     if ! self.valid_command?(frame['command'])#TODO: is this enough to catch framing errors?
