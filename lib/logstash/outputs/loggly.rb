@@ -30,8 +30,8 @@ class LogStash::Outputs::Loggly < LogStash::Outputs::Base
   milestone 2
 
   # The hostname to send logs to. This should target the loggly http input
-  # server which is usually "logs.loggly.com"
-  config :host, :validate => :string, :default => "logs.loggly.com"
+  # server which is usually "logs-01.loggly.com" (Gen2 account)
+  config :host, :validate => :string, :default => "logs-01.loggly.com"
 
   # The loggly http input key to send to.
   # This is usually visible in the Loggly 'Inputs' page as something like this
