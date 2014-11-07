@@ -84,7 +84,7 @@ class LogStash::Outputs::Jira < LogStash::Outputs::Base
       config.username = @username
       config.password = @password
       config.uri = @host
-      config.auth_type = :cookie
+      config.auth_type = :basic
       config.api_version = "latest"
     end
 
