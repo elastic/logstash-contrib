@@ -57,6 +57,10 @@ require 'open3'
 #         # specify the port to connect to (default 10051)
 #         port => "10051"
 #
+#         # specify the time stamp field (optional). 
+#         # Should be formatted in unix time.
+#         time_stamp => "tsfield"
+#
 #         # specify the path to zabbix_sender
 #         # (defaults to "/usr/local/bin/zabbix_sender")
 #         zabbix_sender => "/usr/local/bin/zabbix_sender"
