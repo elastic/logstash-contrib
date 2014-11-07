@@ -93,8 +93,8 @@ issue = Jiralicious::Issue.new
     issue.fields.set_id("project", @projectid) # would have prefered a project key, https://github.com/jstewart/jiralicious/issues/16
     issue.fields.set("summary", @summary)
     issue.fields.set_id("issuetype", @issuetypeid)
-    issue.fields.set_name("reporter", @reporter)
-    issue.fields.set_name("assignee", @assignee)
+    issue.fields.set_name("reporter", @reporter) if not @reporter.nil?
+    issue.fields.set_name("assignee", @assignee) if not @assignee.nil?
     issue.fields.set_id("priority", @priority)
 #puts issue.fields.to_yaml
     issue.save
