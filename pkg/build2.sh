@@ -47,7 +47,7 @@ fi
 # Find files that only contrib contains.
 tarfiles() {
   log "Listing files in $1" 
-  tar -ztf "$1" | sed -re 's@^[^/]+/@@' | sort
+  tar -ztf "$1" | grep -v '/$' | sed -re 's@^[^/]+/@@' | sort
 }
 tarfiles $contribtar > $workdir/files.contrib
 tarfiles $logstashtar > $workdir/files.logstash
@@ -63,10 +63,9 @@ tar -C $workdir/tarball -zxf $contribtar --strip-components 1
 
 _fpm() {
   target=$1
-  fpm -s dir -n logstash-contrib -v "$RELEASE" \
+  fpm -s dir -n logstash-contrib \
     -a noarch --url "https://github.com/elasticsearch/logstash-contrib" \
     --description "Community supported plugins for Logstash" \
-    -d "logstash = $RELEASE" \
     --vendor "Elasticsearch" \
     --license "Apache 2.0" \
     "$@"
@@ -74,12 +73,21 @@ _fpm() {
 case $os in
   centos|fedora|redhat|sl)
     _fpm -t rpm --rpm-use-file-permissions --rpm-user root --rpm-group root \
-      --iteration "1_$REVISION"  \
-      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files | head -1)
+      --iteration "1_$REVISION" --rpm-ignore-iteration-in-dependencies \
+      -d "logstash = $RELEASE" -v "$RELEASE" \
+      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files)
     ;;
   ubuntu|debian)
+    if ! echo $RELEASE | grep -q '\.(dev\|rc.*)'; then
+      # This is a dev or RC version... So change the upstream version
+      # example: 1.2.2.dev => 1.2.2~dev
+      # This ensures a clean upgrade path.
+      RELEASE="$(echo $RELEASE | sed 's/\.\(dev\|rc.*\)/~\1/')"
+    fi
+
     _fpm -t deb --deb-user root --deb-group root \
-      --iteration "1-$REVISION"  \
-      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files | head -1)
+      --iteration "1-$REVISION" --deb-ignore-iteration-in-dependencies \
+      -d "logstash = $RELEASE" -v "$RELEASE" \
+      -f -C $workdir/tarball --prefix /opt/logstash $(cat $workdir/files)
     ;;
 esac

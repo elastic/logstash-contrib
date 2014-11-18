@@ -111,7 +111,7 @@ cd $basedir
 case $os in
   centos|fedora|redhat|sl) 
     fpm -s dir -t rpm -n logstash-contrib -v "$RELEASE" \
-      -a noarch --iteration "1_${RPM_REVISION}" \
+      -a noarch --iteration "1_${RPM_REVISION}" --ignore-iteration-in-dependencies \
       --url "$URL" \
       --description "$DESCRIPTION" \
       -d "logstash = $RELEASE" \
@@ -130,7 +130,7 @@ case $os in
     fi
 
     fpm -s dir -t deb -n logstash-contrib -v "$RELEASE" \
-      -a all --iteration "1-${DEB_REVISION}" \
+      -a all --iteration "1-${DEB_REVISION}" --ignore-iteration-in-dependencies \
       --url "$URL" \
       --description "$DESCRIPTION" \
       --vendor "Elasticsearch" \
