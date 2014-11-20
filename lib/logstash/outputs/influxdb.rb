@@ -132,7 +132,7 @@ class LogStash::Outputs::InfluxDB < LogStash::Outputs::Base
     # ]
     event_hash = {}
     event_hash['name'] = event.sprintf(@series)
-    if @columns_from_event_fields
+    if !@columns_from_event_fields
       sprintf_points = Hash[@data_points.map {|k,v| [event.sprintf(k), event.sprintf(v)]}]
     else
       sprintf_points = event.to_hash
