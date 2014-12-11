@@ -1,39 +1,13 @@
-# Logstash Contrib Repository
+# ALL NEW!  Please read!
 
-This is a collection of companion plugins (and hopefully tests, too!) to be
-used in conjunction with [Logstash](https://github.com/elasticsearch/logstash).
+## This repository is being deprecated!
 
-The plugins here are maintained by the core Logstash team, and supported by the 
-community.
+**Beginning with Logstash 1.5 there will be a new plugin management system.**  No longer will all plugins be shipped with the Logstash core, they will be completely independent from one another.
 
-## Building
+This means that **new pull requests will not be accepted** here.  This also means that any **existing pull requests will likely need to be rerouted to their new repository**.  You can find where the new plugin repository is below.
 
-The same build principles which exist in the core Logstash project will apply here.
-After installation plugins found herein will be end up in the same path as the core
-installation.  Building a tarball package is as simple as:
+## [github.com/logstash-plugins](http://github.com/logstash-plugins)
 
-```
-make tarball
-```
+Repositories are now in [github.com/logstash-plugins](http://github.com/logstash-plugins) and have a `logstash-{type}-{name}` syntax, where type is one of `input`, `codec`, `filter`, or `output`.  For example, the Elasticsearch output plugin is at [github.com/logstash-plugins/logstash-output-elasticsearch](http://github.com/logstash-plugins/logstash-output-elasticsearch), and the collectd codec is at [github.com/logstash-plugins/logstash-codec-collectd](http://github.com/logstash-plugins/logstash-codec-collectd).
 
-The resulting package will be found in the `build` directory.
-
-## Project Principles
-
-* Community: If a newbie has a bad time, it's a bug.
-* Software: Make it work, then make it right, then make it fast.
-* Technology: If it doesn't do a thing today, we can make it do it tomorrow.
-
-## Contributing
-
-All contributions are welcome: ideas, patches, documentation, bug reports,
-complaints, and even something you drew up on a napkin.
-
-Programming is not a required skill. Whatever you've seen about open source and
-maintainers or community members  saying "send patches or die" - you will not
-see that here.
-
-It is more important to me that you are able to contribute.
-
-For more information about contributing, see the
-[CONTRIBUTING](https://github.com/elasticsearch/logstash/blob/master/CONTRIBUTING.md) file.
+More information on plugin creation, the build process, testing, etc. will be forthcoming.
