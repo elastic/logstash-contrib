@@ -144,20 +144,20 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
         data =  Base64.decode64(data) if @base64 == true
         
         if !@iv_random_length.nil? 
-        	@random_iv = data.byteslice(0,@iv_random_length)
-        	data = data.byteslice(@iv_random_length..data.length)
+          @random_iv = data.byteslice(0,@iv_random_length)
+          data = data.byteslice(@iv_random_length..data.length)
         end
         
       end
       
       if !@iv_random_length.nil? and @mode == "encrypt"
-      	 @random_iv = OpenSSL::Random.random_bytes(@iv_random_length)
+        @random_iv = OpenSSL::Random.random_bytes(@iv_random_length)
       end
       
       # if iv_random_length is specified, generate a new one
       # and force the cipher's IV = to the random value
       if !@iv_random_length.nil? 
-         @cipher.iv = @random_iv
+        @cipher.iv = @random_iv
       end
       
       result = @cipher.update(data) + @cipher.final
@@ -166,7 +166,7 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
       
         # if we have a random_iv, prepend that to the crypted result
       	if !@random_iv.nil? 
-        	result = @random_iv + result
+          result = @random_iv + result
         end
         
         result =  Base64.encode64(result) if @base64 == true
@@ -188,8 +188,8 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
       filter_matched(event) if !result.nil?
       
       if !@max_cipher_reuse.nil? and @total_cipher_uses >= @max_cipher_reuse 
-      	  @logger.debug("max_cipher_reuse["+@max_cipher_reuse.to_s+"] reached, total_cipher_uses = "+@total_cipher_uses.to_s)
-      	  init_cipher
+        @logger.debug("max_cipher_reuse["+@max_cipher_reuse.to_s+"] reached, total_cipher_uses = "+@total_cipher_uses.to_s)
+        init_cipher
       end
       
     end
@@ -198,8 +198,8 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
   def init_cipher
   
     if !@cipher.nil? 
-       @cipher.reset 
-       @cipher = nil
+      @cipher.reset 
+      @cipher = nil
     end
    
     @cipher = OpenSSL::Cipher.new(@algorithm)
@@ -223,13 +223,12 @@ class LogStash::Filters::Cipher < LogStash::Filters::Base
     @cipher.key = @key
 
 	if !@iv.nil? and !@iv.empty? and @iv_random_length.nil?
-	    @cipher.iv = @iv if @iv
+	  @cipher.iv = @iv if @iv
 	    
 	elsif !@iv_random_length.nil?
-		@logger.debug("iv_random_length is configured, ignoring any statically defined value for 'iv'", :iv_random_length => @iv_random_length)
-		
+	  @logger.debug("iv_random_length is configured, ignoring any statically defined value for 'iv'", :iv_random_length => @iv_random_length)
 	else 
-		raise "cipher plugin: either 'iv' or 'iv_random_length' must be configured, but not both; aborting"
+	  raise "cipher plugin: either 'iv' or 'iv_random_length' must be configured, but not both; aborting"
 	end
 
     @cipher.padding = @cipher_padding if @cipher_padding
