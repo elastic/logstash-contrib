@@ -61,24 +61,26 @@ describe LogStash::Filters::Aggregate do
 
 				insist { aggregate_maps.size } == 1
 				insist { aggregate_maps["id123"].nil? } == false
-				insist { aggregate_maps["id123"].creation_timestamp } == event["@timestamp"]
+				insist { aggregate_maps["id123"].creation_timestamp } >= event["@timestamp"]
 				insist { aggregate_maps["id123"].map["dao.duration"] } == 0
 			end
 		end
 
 		describe "and receiving two 'start events' for the same task_id" do
 			it "keeps the first one and does nothing with the second one" do
-				first_start_event = start_event("requestid" => "id124")
-				first_update_event = update_event("requestid" => "id124", "duration" => 2)
-				second_start_event = start_event("requestid" => "id124")
 
+				first_start_event = start_event("requestid" => "id124")
 				@start_filter.filter(first_start_event)
+				
+				first_update_event = update_event("requestid" => "id124", "duration" => 2)
 				@update_filter.filter(first_update_event)
+				
 				sleep(1)
+				second_start_event = start_event("requestid" => "id124")
 				@start_filter.filter(second_start_event)
 
 				insist { aggregate_maps.size } == 1
-				insist { aggregate_maps["id124"].creation_timestamp } == first_start_event["@timestamp"]
+				insist { aggregate_maps["id124"].creation_timestamp } < second_start_event["@timestamp"]
 				insist { aggregate_maps["id124"].map["dao.duration"] } == first_update_event["duration"]
 			end
 		end
@@ -123,7 +125,7 @@ describe LogStash::Filters::Aggregate do
 						@end_filter.filter(end_event("requestid" => different_id_value))
 
 						insist { aggregate_maps.size } == 1
-						insist { aggregate_maps[@task_id_value].creation_timestamp } == @start_event["@timestamp"]
+						insist { aggregate_maps[@task_id_value].nil? } == false
 					end
 				end
 
