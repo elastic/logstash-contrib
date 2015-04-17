@@ -30,6 +30,10 @@ class LogStash::Filters::JSONEncode < LogStash::Filters::Base
   # field will be overwritten.
   config :target, :validate => :string
 
+  # Whether the written JSON should be pretty (with newlines and 
+  # indentations).  False will cause JSON to be more compact.
+  config :pretty, :validate => :boolean, :default => true
+
   public
   def register
     @target = @source if @target.nil?
@@ -42,7 +46,11 @@ class LogStash::Filters::JSONEncode < LogStash::Filters::Base
     @logger.debug("Running JSON encoder", :event => event)
 
     begin
-      event[@target] = JSON.pretty_generate(event[@source])
+      if @pretty === true
+        event[@target] = JSON.pretty_generate(event[@source])
+      else
+        event[@target] = JSON.generate(event[@source])
+      end
       filter_matched(event)
     rescue => e
       event.tag "_jsongeneratefailure"
