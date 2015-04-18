@@ -4,14 +4,15 @@ require "logstash/namespace"
 require "open-uri"
 
 # A general search and replace tool which uses a configured hash
-# and/or a YAML file to determine replacement values.
+# and/or a YAML file or a Web service with a YAML response to determine replacement values.
 #
 # The dictionary entries can be specified in one of three ways: First,
 # the "dictionary" configuration item may contain a hash representing
 # the mapping. Second, an external YAML file (readable by logstash) may be specified
 # in the "dictionary_path" configuration item. These two methods may not be used
 # in conjunction; it will produce an error.
-# Third, an external YAML URI
+# Third, a Web service who your request produces a YML response. This may not be 
+# used in conjunction with the first and second method; it will produce an error.
 #
 # Operationally, if the event field specified in the "field" configuration
 # matches the EXACT contents of a dictionary entry key (or matches a regex if
@@ -53,7 +54,7 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
   #                         "old version", "new version" ]
   #       }
   #     }
-  # NOTE: it is an error to specify both dictionary and dictionary_path
+  # NOTE: it is an error to specify both `dictionary` and `dictionary_path` or `dictionary_url`
   config :dictionary, :validate => :hash,  :default => {}
 
   # The full path of the external YAML dictionary file. The format of the table
@@ -65,18 +66,20 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
   #     merci: gracias
   #     old version: new version
   #     
-  # NOTE: it is an error to specify both dictionary and dictionary_path
+  # NOTE: it is an error to specify both `dictionary` and `dictionary_path` or `dictionary_url`
   config :dictionary_path, :validate => :path
 
-  # The full URI path of a REST service who generates an yml file. The file downloaded needs 
-  # be equals than needed for @dictionary_path
+  # The full URI path of a Web service who generates an yml format response. 
+  # The response generated needs to be equals than needed for @dictionary_path
+  #
+  # NOTE: it is an error to specify both `dictionary` and `dictionary_path` or `dictionary_url`
   config :dictionary_url, :validate => :string
 
-  # fileName (without extension) where .yml will be stored from a REST service.
+  # Filename (without extension) where .yml will be stored from a Web service.
   config :file_to_download, :validate => :string, :default => "dictionary"
 
-  # When using a dictionary file, this setting will indicate how frequently
-  # (in seconds) logstash will check the YAML file for updates.
+  # When using a dictionary file or url, this setting will indicate how frequently
+  # (in seconds) logstash will check the YAML file or url for updates.
   config :refresh_interval, :validate => :number, :default => 300
   
   # The destination field you wish to populate with the translated code. The default
@@ -192,7 +195,7 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
       if @next_refresh < Time.now
         download_yaml(@dictionary_url,@file_to_download)
         @next_refresh = Time.now + @refresh_interval
-        @logger.info("downloading dictionary file")
+        @logger.info("downloading and refreshing dictionary file")
       end
     end
     
@@ -217,7 +220,7 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
       else 
         translation = source.gsub(Regexp.union(@dictionary.keys), @dictionary)
         if source != translation
-          event[@destination] = translation
+          event[@destination] = translation.force_encoding(Encoding::UTF_8)
           matched = true
         end
       end
