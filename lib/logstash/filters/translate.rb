@@ -1,15 +1,17 @@
 # encoding: utf-8
 require "logstash/filters/base"
 require "logstash/namespace"
+require "open-uri"
 
 # A general search and replace tool which uses a configured hash
 # and/or a YAML file to determine replacement values.
 #
-# The dictionary entries can be specified in one of two ways: First,
+# The dictionary entries can be specified in one of three ways: First,
 # the "dictionary" configuration item may contain a hash representing
 # the mapping. Second, an external YAML file (readable by logstash) may be specified
 # in the "dictionary_path" configuration item. These two methods may not be used
 # in conjunction; it will produce an error.
+# Third, an external YAML URI
 #
 # Operationally, if the event field specified in the "field" configuration
 # matches the EXACT contents of a dictionary entry key (or matches a regex if
@@ -66,6 +68,13 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
   # NOTE: it is an error to specify both dictionary and dictionary_path
   config :dictionary_path, :validate => :path
 
+  # The full URI path of a REST service who generates an yml file. The file downloaded needs 
+  # be equals than needed for @dictionary_path
+  config :dictionary_url, :validate => :string
+
+  # fileName (without extension) where .yml will be stored from a REST service.
+  config :file_to_download, :validate => :string, :default => "dictionary"
+
   # When using a dictionary file, this setting will indicate how frequently
   # (in seconds) logstash will check the YAML file for updates.
   config :refresh_interval, :validate => :number, :default => 300
@@ -118,6 +127,13 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
       registering = true
       load_yaml(registering)
     end
+    if @dictionary_url
+      @next_refresh = Time.now + @refresh_interval
+      registering = true
+      @logger.warn(@dictionary_url)
+      @logger.warn(@file_to_download)
+      download_yaml(@dictionary_url,@file_to_download)
+    end
     
     @logger.debug? and @logger.debug("#{self.class.name}: Dictionary - ", :dictionary => @dictionary)
     if @exact
@@ -127,23 +143,38 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
     end
   end # def register
 
-  public
-  def load_yaml(registering=false)
-    if !File.exists?(@dictionary_path)
-      @logger.warn("dictionary file read failure, continuing with old dictionary", :path => @dictionary_path)
+  private
+  def load_file(registering,fileName)
+    if !File.exists?(fileName)
+      @logger.warn("dictionary file read failure, continuing with old dictionary", :path => fileName)
       return
     end
 
     begin
-      @dictionary.merge!(YAML.load_file(@dictionary_path))
+      @dictionary.merge!(YAML.load_file(fileName))
     rescue Exception => e
       if registering
-        raise "#{self.class.name}: Bad Syntax in dictionary file #{@dictionary_path}"
+        raise "#{self.class.name}: Bad Syntax in dictionary file #{fileName}"
       else
-        @logger.warn("#{self.class.name}: Bad Syntax in dictionary file, continuing with old dictionary", :dictionary_path => @dictionary_path)
+        @logger.warn("#{self.class.name}: Bad Syntax in dictionary file, continuing with old dictionary", :dictionary_path => fileName)
       end
     end
-  end
+  end # def load_file
+
+  public
+  def load_yaml(registering=false)
+    load_file(registering,@dictionary_path)
+  end # def load_yaml
+
+  public
+  def download_yaml(path,filename)
+    File.open(filename+".yml", "wb") do |saved_file|
+      open(path, "rb") do |read_file|
+        saved_file.write(read_file.read)
+      end
+    end
+    load_file(true,filename+".yml")
+  end # def download_yaml
 
   public
   def filter(event)
@@ -154,6 +185,14 @@ class LogStash::Filters::Translate < LogStash::Filters::Base
         load_yaml
         @next_refresh = Time.now + @refresh_interval
         @logger.info("refreshing dictionary file")
+      end
+    end
+
+    if @dictionary_url
+      if @next_refresh < Time.now
+        download_yaml(@dictionary_url,@file_to_download)
+        @next_refresh = Time.now + @refresh_interval
+        @logger.info("downloading dictionary file")
       end
     end
     
