@@ -73,8 +73,8 @@ require "logstash/namespace"
 #      temp_file_prefix => "logstash_bq"                         (optional)
 #      date_pattern => "%Y-%m-%dT%H:00"                          (optional)
 #      flush_interval_secs => 2                                  (optional)
-#      uploader_interval_secs => 60                              (optional)
-#      deleter_interval_secs => 60                               (optional)
+#      uploader_interval_secs => 90                              (optional)
+#      deleter_interval_secs => 90                               (optional)
 #    }
 # }
 #
