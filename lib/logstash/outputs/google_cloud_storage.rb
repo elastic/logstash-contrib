@@ -28,8 +28,8 @@ require "zlib"
 # For more info on Google Cloud Storage, please go to:
 # https://cloud.google.com/products/cloud-storage
 #
-# In order to use this plugin, a Google service account must be used. For
-# more information, please refer to:
+# In order to use this plugin, a Google service account must be used and have
+# Writer access to the bucket. For more information, please refer to:
 # https://developers.google.com/storage/docs/authentication#service_accounts
 #
 # Recommendation: experiment with the settings depending on how much log
