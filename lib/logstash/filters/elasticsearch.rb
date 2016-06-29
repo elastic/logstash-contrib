@@ -35,6 +35,10 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
   # List of elasticsearch hosts to use for querying.
   config :hosts, :validate => :array
 
+  # Inidices to search. A comma-separated list of index names to search; use `_all`
+  # or empty string to perform the operation on all indices
+  config :indices, :validate => :string, :default => "logstash-*"
+
   # Elasticsearch query string
   config :query, :validate => :string
 
@@ -43,6 +47,11 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
 
   # Hash of fields to copy from old event (found via elasticsearch) into new event
   config :fields, :validate => :hash, :default => {}
+
+  # Ignore errors; assume empty result set (query failed)
+  # Unsetting this turns off error logging as exceptions are unhandled
+  # This can make debugging the query somewhat tricky...
+  config :fail_on_error, :validate => :boolean, :default => true
 
   public
   def register
@@ -59,7 +68,7 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
     begin
       query_str = event.sprintf(@query)
 
-      results = @client.search q: query_str, sort: @sort, size: 1
+      results = @client.search q: query_str, sort: @sort, size: 1, index: @indices
 
       @fields.each do |old, new|
         event[new] = results['hits']['hits'][0]['_source'][old]
@@ -67,8 +76,13 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
 
       filter_matched(event)
     rescue => e
-      @logger.warn("Failed to query elasticsearch for previous event",
-                   :query => query_str, :event => event, :error => e)
+      if @fail_on_error
+        @logger.warn("Failed to query elasticsearch for previous event",
+                     :query => query_str, :event => event, :error => e)
+      else
+        event["query_failed"] = query_str
+        filter_matched(event)
+      end
     end
   end # def filter
 end # class LogStash::Filters::Elasticsearch
