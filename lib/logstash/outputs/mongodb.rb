@@ -36,7 +36,8 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
   def register
     require "mongo"
     uriParsed=Mongo::URIParser.new(@uri)
-    conn = uriParsed.connection({})
+    #conn = uriParsed.connection({})
+    conn = Mongo::MongoShardedClient.from_uri(@uri, options = {})
     if uriParsed.auths.length > 0
       uriParsed.auths.each do |auth|
         if !auth['db_name'].nil?
@@ -56,7 +57,8 @@ class LogStash::Outputs::Mongodb < LogStash::Outputs::Base
       if @isodate
         # the mongodb driver wants time values as a ruby Time object.
         # set the @timestamp value of the document to a ruby Time object, then.
-        document = event.to_hash
+        document = event.to_hash.clone
+        event.to_hash.merge("@timestamp" => event["@timestamp"].to_json)
       else
         document = event.to_hash.merge("@timestamp" => event["@timestamp"].to_json)
       end
