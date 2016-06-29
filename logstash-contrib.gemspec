@@ -31,8 +31,12 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency "jdbc-sqlite3"                     #(MIT license)
   gem.add_runtime_dependency "rsolr"                            #(Apache 2.0 license)
   gem.add_runtime_dependency "jmx4r"                            #(Apache 2.0 license)
-  gem.add_runtime_dependency "fog", ["1.20.0"]                 #(MIT license)
+  gem.add_runtime_dependency "fog", ["1.20.0"]                 	#(MIT license)
   gem.add_runtime_dependency "varnish-rb"                       #(MIT license)
+  #zendesk dependencies
+  gem.add_runtime_dependency "inflection", ["1.0.0"]           	#(MIT license) 
+  gem.add_runtime_dependency "hashie", ["2.1.1"]           	#(MIT license)
+  gem.add_runtime_dependency "zendesk_api", ["1.3.5"]           #(Apache 2.0 license)
 
   if RUBY_PLATFORM == 'java'
     gem.platform = RUBY_PLATFORM
