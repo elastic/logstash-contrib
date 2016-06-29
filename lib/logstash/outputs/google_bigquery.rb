@@ -199,7 +199,13 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       # so flushing it before.
       @temp_file.fsync()
       @temp_file.close()
-      initialize_next_log()
+      if @temp_file.closed?
+        initialize_next_log()
+      else
+	@temp_file.fsync()
+        @temp_file.close()
+        initialize_next_log()
+      end
     end
 
     @temp_file.write(message)
@@ -270,7 +276,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
         delete_item = @delete_queue.pop
         job_id = delete_item["job_id"]
         filename = delete_item["filename"]
-        job_status = get_job_status(job_id)
+        job_status = get_job_status(job_id, filename)
         case job_status["state"]
         when "DONE"
           if job_status.has_key?("errorResult")
@@ -285,7 +291,11 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
                           :job_id => job_id,
                           :filename => filename,
                           :job_status => job_status)
-            File.delete(filename)
+            if File.exist?(filename)
+              File.delete(filename)
+            else
+              @logger.debug("File does not exist")
+            end
           end
         when "PENDING", "RUNNING"
           @logger.debug("BQ: job is not done, NOT deleting local file yet.",
@@ -337,15 +347,18 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
             end
           end
         end
-
-        if File.size(filename) > 0
+        if File.exist?(filename) and File.size(filename) > 0
           job_id = upload_object(filename)
           @delete_queue << { "filename" => filename, "job_id" => job_id }
         else
           @logger.debug("BQ: skipping empty file.")
           @logger.debug("BQ: delete local temporary file ",
                         :filename => filename)
-          File.delete(filename)
+          if File.exist?(filename)
+            File.delete(filename)
+          else
+            @logger.debug("File does not exist")
+          end
         end
 
         sleep @uploader_interval_secs
@@ -466,7 +479,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
 
   ##
   # Uploads a local file to the configured bucket.
-  def get_job_status(job_id)
+  def get_job_status(job_id, filename)
     begin
       require 'json'
       @logger.debug("BQ: check job status.",
@@ -488,7 +501,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       contents = response["status"]
       return contents
     rescue => e
-      @logger.error("BQ: failed to check status", :exception => e)
+      @logger.error("BQ: failed to check status", :filename => filename, :exception => e)
       # TODO(rdc): limit retries?
       sleep 1
       retry
@@ -503,7 +516,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       table_id = @table_prefix + "_" + get_date_pattern(filename)
       # BQ does not accept anything other than alphanumeric and _
       # Ref: https://developers.google.com/bigquery/browser-tool-quickstart?hl=en
-      table_id = table_id.gsub!(':','_').gsub!('-', '_')
+      table_id = table_id.gsub(':','_').gsub('-', '_')
 
       @logger.debug("BQ: upload object.",
                     :filename => filename,
@@ -520,10 +533,36 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
               "tableId" => table_id
             },
             'createDisposition' => 'CREATE_IF_NEEDED',
-            'writeDisposition' => 'WRITE_APPEND'
+            'writeDisposition' => 'WRITE_APPEND',
+            'maxBadRecords' => 99
           }
         }
       }
+
+      @logger.info("Execution details: ",
+                   :body_object => body,
+                   :parameters => {
+                     'uploadType' => 'multipart',
+                     'projectId' => @project_id
+                   },
+                  :media => media)
+
+      datasetId = @project_id+":"+@dataset
+
+      verify_dataset = @client.execute(:api_method => @bq.datasets.get,
+                                       :parameters => {
+                                         'projectId' => @project_id,
+                                         'datasetId' => datasetId })
+
+      status = JSON.parse(verify_dataset.response.body)["id"]
+      if status != dataset
+         @logger.info("BQ: dataset doesnt exist, creating it instead")
+         create_dataset = @client.execute(:api_method => @bq.datasets.insert,
+                                          :parameters => { 'projectId' => @project_id },
+                                          :body_object => { 'id' => datasetId })
+         sleep 10
+      end
+
       insert_result = @client.execute(:api_method => @bq.jobs.insert,
                                       :body_object => body,
                                       :parameters => {
@@ -540,7 +579,9 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       @logger.error("BQ: failed to upload file", :exception => e)
       # TODO(rdc): limit retries?
       sleep 1
-      retry
+      if File.exist?(filename)
+        retry
+      end
     end
   end
 end
