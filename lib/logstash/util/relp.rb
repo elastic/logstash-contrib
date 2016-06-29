@@ -4,7 +4,7 @@ require "socket"
 class Relp#This isn't much use on its own, but gives RelpServer and RelpClient things
 
   RelpVersion = '0'#TODO: spec says this is experimental, but rsyslog still seems to exclusively use it
-  RelpSoftware = 'logstash,1.1.1,http://logstash.net'
+  RelpSoftware = 'logstash,1.4.1,http://logstash.net'
 
   class RelpError < StandardError; end
   class InvalidCommand < RelpError; end
@@ -36,15 +36,16 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       #Only allow txnr to be 0 or be determined automatically
       frame['txnr'] = self.nexttxnr() unless frame['txnr']==0
     end
+
     frame['txnr'] = frame['txnr'].to_s
     frame['message'] = '' if frame['message'].nil?
-    frame['datalen'] = frame['message'].length.to_s
+    frame['datalen'] = frame['message'].bytesize.to_s
     wiredata=[
       frame['txnr'],
       frame['command'],
       frame['datalen'],
       frame['message']
-    ].join(' ').strip
+    ].join(' ')
     begin
       @logger.debug? and @logger.debug("Writing to socket", :data => wiredata)
       socket.write(wiredata)
@@ -53,7 +54,8 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       #for some reason it seems to take 2 writes after the server closes the
       #connection before we get an exception
       socket.write("\n")
-    rescue Errno::EPIPE,IOError,Errno::ECONNRESET#TODO: is this sufficient to catch all broken connections?
+    rescue IOError,Errno::EPIPE,Errno::EBADF,Errno::ECONNRESET => e
+      @logger.warn? and @logger.warn("Error while writing frame", :exception => e, :backtrace => e.backtrace)
       raise ConnectionClosed
     end
     return frame['txnr'].to_i
@@ -62,8 +64,8 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
   def frame_read(socket)
     begin
       frame = Hash.new
-      frame['txnr'] = socket.readline(' ').strip.to_i
-      frame['command'] = socket.readline(' ').strip
+      frame['txnr'] = socket.readline(' ').rstrip.to_i
+      frame['command'] = socket.readline(' ').rstrip
 
       #Things get a little tricky here because if the length is 0 it is not followed by a space.
       leading_digit=socket.read(1)
@@ -71,11 +73,13 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         frame['datalen'] = 0
         frame['message'] = ''
       else
-        frame['datalen'] = (leading_digit + socket.readline(' ')).strip.to_i
+        frame['datalen'] = (leading_digit + socket.readline(' ')).rstrip.to_i
         frame['message'] = socket.read(frame['datalen'])
+        socket.read(1) #read newline at the end
       end
       @logger.debug? and @logger.debug("Read frame", :frame => frame)
-    rescue EOFError,Errno::ECONNRESET,IOError
+    rescue EOFError,IOError,Errno::EPIPE,Errno::EBADF,Errno::ECONNRESET => e
+      @logger.warn? and @logger.warn("Error while reading frame", :exception => e, :backtrace => e.backtrace)
       raise ConnectionClosed
     end
     if ! self.valid_command?(frame['command'])#TODO: is this enough to catch framing errors?
@@ -226,7 +230,13 @@ class RelpClient < Relp
     #These are extra commands that we require, otherwise refuse the connection
     @required_relp_commands = required_commands
 
-    @socket=TCPSocket.new(host,port)
+    begin
+      @socket=TCPSocket.new(host,port)
+    rescue IOError,Errno::ECONNREFUSED
+      @logger.error("Could not start RELP client: Connection refused",
+                    :host => host, :port => port)
+      raise ConnectionClosed
+    end
 
     #This'll start the automatic frame numbering 
     @lasttxnr = 0
@@ -262,12 +272,24 @@ class RelpClient < Relp
     #This thread deals with responses that come back
     reader = Thread.start do
       loop do
-        f = self.frame_read(@socket)
+        begin
+          f = self.frame_read(@socket)
+        rescue ConnectionClosed => e
+          ## ignore this error
+          break
+        end
+
         if f['command'] == 'rsp' && f['message'] == '200 OK'
           @buffer.delete(f['txnr'])
         elsif f['command'] == 'rsp' && f['message'][0,1] == '5'
           #TODO: What if we get an error for something we're already retransmitted due to timeout?
-          new_txnr = self.frame_write(@socket, @buffer[f['txnr']])
+          begin
+            new_txnr = self.frame_write(@socket, @buffer[f['txnr']])
+          rescue ConnectionClosed => e
+            ## ignore this error
+            break
+          end
+
           @buffer[new_txnr] = @buffer[f['txnr']]
           @buffer.delete(f['txnr'])
         elsif f['command'] == 'serverclose' || f['txnr'] == @close_txnr
@@ -285,8 +307,19 @@ class RelpClient < Relp
       loop do
         #This returns old txnrs that are still present
         (@buffer.keys & old_buffer.keys).each do |txnr|
-          new_txnr = self.frame_write(@socket, @buffer[txnr])
-          @buffer[new_txnr] = @buffer[txnr]
+          current_txnr = @buffer[txnr]
+          if current_txnr.nil?
+            next # vanished since start of active loop round
+          end
+
+          begin
+            new_txnr = self.frame_write(@socket, current_txnr)
+          rescue ConnectionClosed => e
+            ## ignore this error, connection was closed and still missing replies are returned by close
+            break
+          end
+
+          @buffer[new_txnr] = current_txnr
           @buffer.delete(txnr)
         end
         old_buffer = @buffer
@@ -299,10 +332,16 @@ class RelpClient < Relp
   def close
     frame = Hash.new
     frame['command'] = 'close'
-    @close_txnr=self.frame_write(@socket, frame)
+
+    begin
+      @close_txnr=self.frame_write(@socket, frame)
+    rescue ConnectionClosed => e
+    end
+
     #TODO: ought to properly wait for a reply etc. The serverclose will make it work though
     sleep @retransmission_timeout
     @socket.close#TODO: shutdown?
+
     return @buffer
   end
 
@@ -320,6 +359,11 @@ class RelpClient < Relp
   end
 
   def nexttxnr
+    # maximum txnr, next txnr is 1
+    if @lasttxnr >= 999999999
+      @lasttxnr = 0
+    end
+
     @lasttxnr += 1
   end
 
