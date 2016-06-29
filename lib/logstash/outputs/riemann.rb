@@ -140,7 +140,7 @@ class LogStash::Outputs::Riemann < LogStash::Outputs::Base
     end
     if @map_fields == true
       @my_event = Hash.new
-      map_fields(nil, event)
+      map_fields(nil, event.to_hash)
       r_event.merge!(@my_event) {|key, val1, val2| val1}
     end
     r_event[:tags] = event["tags"] if event["tags"].is_a?(Array)
