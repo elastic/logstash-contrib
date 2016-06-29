@@ -14,7 +14,9 @@ require "logstash/util/fieldreference"
 #       if [type] == "end" {
 #          elasticsearch {
 #             hosts => ["es-server"]
-#             query => "type:start AND operation:%{[opid]}"
+#             query => "operation:%{[opid]}"
+#             type  => "type"  # defaults to all
+#             index  => "index"  # defaults to all
 #             fields => ["@timestamp", "started"]
 #          }
 #
@@ -38,6 +40,12 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
   # Elasticsearch query string
   config :query, :validate => :string
 
+  # Index to search in
+  config :index, :validate => :string, :default => ""
+
+  # Types to search in
+  config :type, :validate => :string, :default => ""
+
   # Comma-delimited list of <field>:<direction> pairs that define the sort order
   config :sort, :validate => :string, :default => "@timestamp:desc"
 
@@ -59,10 +67,12 @@ class LogStash::Filters::Elasticsearch < LogStash::Filters::Base
     begin
       query_str = event.sprintf(@query)
 
-      results = @client.search q: query_str, sort: @sort, size: 1
+      results = @client.search index: @index, type: @type, q: query_str, sort: @sort, size: 1
 
-      @fields.each do |old, new|
-        event[new] = results['hits']['hits'][0]['_source'][old]
+      if not results['hits']['hits'].empty?
+        @fields.each do |old, new|
+          event[new] = results['hits']['hits'][0]['_source'][old]
+        end
       end
 
       filter_matched(event)
