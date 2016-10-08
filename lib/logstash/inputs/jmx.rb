@@ -33,18 +33,26 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
   def check_conf(conf_hash,file_conf)
     #Check required parameters
     @logger.debug("Check that required parameters are define with good types in #{conf_hash}")
-    parameter = {'host' => 'String'.class, 'port' => 1.class, 'queries' => [].class}
+    parameter = {'host' => 'String'.class, 'port' => 1.class, 'url' => 'String'.class, 'queries' => [].class}
     parameter.each_key do |param|
       if conf_hash.has_key?(param)
         unless conf_hash[param].instance_of?(parameter[param])
           @logger.error("Bad syntax for conf file #{file_conf}. Bad types for parameter #{param}, expecting #{parameter[param]}, found #{conf_hash[param].class}.")
           return false
         end
-      else
-        @logger.error("Bad syntax for conf file #{file_conf}. Missing parameter #{param}.")
-        return false
       end
-    end
+   end 
+ 
+   @logger.debug('Check if host/port or url parameter is configured')
+   if (!conf_hash.has_key?('host') or !conf_hash.has_key?('port')) and !conf_hash.has_key?('url')
+     @logger.error("Bad syntax for conf file #{file_conf}. Missing parameters host/port or url.")
+   end
+
+   @logger.debug('Check if queries parameter is configured') 
+   if !conf_hash.has_key?('queries') 
+     @logger.error("Bad syntax for conf file #{file_conf}. Missing parameter queries.")
+     return false
+   end
 
     @logger.debug('Check optional parameters types')
     parameter = {'alias' => 'String'.class}
@@ -140,23 +148,33 @@ class LogStash::Inputs::Jmx < LogStash::Inputs::Base
         @logger.debug('Check if jmx connection need a user/password')
         if thread_hash_conf.has_key?('username') and thread_hash_conf.has_key?('password')
           @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']} with user #{thread_hash_conf['username']}")
-          jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
-                                                 :port => thread_hash_conf['port'],
-                                                 :username => thread_hash_conf['username'],
-                                                 :password => thread_hash_conf['password']
+          if thread_hash_conf.has_key?('url')
+            @logger.debug("Connect to #{thread_hash_conf['url']} with user #{thread_hash_conf['username']}")
+            jmx_connection = JMX::MBean.connection :url => thread_hash_conf['url'],
+                                                   :username => thread_hash_conf['username'],
+                                                   :password => thread_hash_conf['password']
+          else
+            @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']} with user #{thread_hash_conf['username']}")
+            jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
+                                                   :port => thread_hash_conf['port'],
+                                                   :username => thread_hash_conf['username'],
+                                                   :password => thread_hash_conf['password']
+          end
         else
-          @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']}")
-          jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
-                                                 :port => thread_hash_conf['port']
+          if thread_hash_conf.has_key?('url')
+            @logger.debug("Connect to #{thread_hash_conf['url']}")
+            jmx_connection = JMX::MBean.connection :url => thread_hash_conf['url']
+          else
+            @logger.debug("Connect to #{thread_hash_conf['host']}:#{thread_hash_conf['port']}")
+            jmx_connection = JMX::MBean.connection :host => thread_hash_conf['host'],
+                                                   :port => thread_hash_conf['port']
+          end
         end
 
 
         if thread_hash_conf.has_key?('alias')
           @logger.debug("Set base_metric_path to alias: #{thread_hash_conf['alias']}")
           base_metric_path = thread_hash_conf['alias']
-        else
-          @logger.debug("Set base_metric_path to host_port: #{thread_hash_conf['host']}_#{thread_hash_conf['port']}")
-          base_metric_path = "#{thread_hash_conf['host']}_#{thread_hash_conf['port']}"
         end
 
 
