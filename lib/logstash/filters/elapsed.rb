@@ -86,7 +86,7 @@ class LogStash::Filters::Elapsed < LogStash::Filters::Base
 
   ELAPSED_TAG = "elapsed"
   EXPIRED_ERROR_TAG = PREFIX + "expired_error"
-  END_WITHOUT_START_TAG = PREFIX + "end_wtihout_start"
+  END_WITHOUT_START_TAG = PREFIX + "end_without_start"
   MATCH_TAG = PREFIX + "match"
 
   config_name "elapsed"
