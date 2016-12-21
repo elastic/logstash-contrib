@@ -81,7 +81,9 @@ require 'thread'
 class LogStash::Filters::Elapsed < LogStash::Filters::Base
   PREFIX = "elapsed."
   ELAPSED_FIELD = PREFIX + "time"
+  ELAPSED_STARTFIELD = PREFIX + "startfield"
   TIMESTAMP_START_EVENT_FIELD = PREFIX + "timestamp_start"
+  TIMESTAMP_END_EVENT_FIELD = PREFIX + "timestamp_end"
   HOST_FIELD = "host"
 
   ELAPSED_TAG = "elapsed"
@@ -113,6 +115,10 @@ class LogStash::Filters::Elapsed < LogStash::Filters::Base
   # to the "end event"; if it's set to 'true' a new "match event" is created.
   config :new_event_on_match, :validate => :boolean, :required => false, :default => false
 
+  # This property manages what field from the start event should be added to the 
+  # elapsed event beside the unique_id_field.
+  config :add_startfield, :validate => :string, :required => false
+  
   public
   def register
     @mutex = Mutex.new
@@ -133,7 +139,6 @@ class LogStash::Filters::Elapsed < LogStash::Filters::Base
 
     unique_id = event[@unique_id_field]
     return if unique_id.nil?
-
     if(start_event?(event))
       filter_matched(event)
       @logger.info("Elapsed, 'start event' received", start_tag: @start_tag, unique_id_field: @unique_id_field)
@@ -154,11 +159,11 @@ class LogStash::Filters::Elapsed < LogStash::Filters::Base
         @mutex.unlock
         elapsed = event["@timestamp"] - start_event["@timestamp"]
         if(@new_event_on_match)
-          elapsed_event = new_elapsed_event(elapsed, unique_id, start_event["@timestamp"])
+          elapsed_event = new_elapsed_event(elapsed, unique_id, start_event[@add_startfield], start_event["@timestamp"], event["@timestamp"])
           filter_matched(elapsed_event)
           yield elapsed_event if block_given?
         else
-          return add_elapsed_info(event, elapsed, unique_id, start_event["@timestamp"])
+          return add_elapsed_info(event, elapsed, unique_id, start_event[@add_startfield], start_event["@timestamp"], event["@timestamp"])
         end
       else
         @mutex.unlock
@@ -229,19 +234,21 @@ class LogStash::Filters::Elapsed < LogStash::Filters::Base
     return (event["tags"] != nil && event["tags"].include?(@end_tag))
   end
 
-  def new_elapsed_event(elapsed_time, unique_id, timestamp_start_event)
+  def new_elapsed_event(elapsed_time, unique_id, start_event_field, timestamp_start_event, timestamp_end_event)
       new_event = LogStash::Event.new
       new_event[HOST_FIELD] = Socket.gethostname
-      return add_elapsed_info(new_event, elapsed_time, unique_id, timestamp_start_event)
+      return add_elapsed_info(new_event, elapsed_time, unique_id, start_event_field, timestamp_start_event, timestamp_end_event)
   end
 
-  def add_elapsed_info(event, elapsed_time, unique_id, timestamp_start_event)
+  def add_elapsed_info(event, elapsed_time, unique_id, start_event_field, timestamp_start_event, timestamp_end_event)
       event.tag(ELAPSED_TAG)
       event.tag(MATCH_TAG)
 
+	  event[ELAPSED_STARTFIELD] = start_event_field
       event[ELAPSED_FIELD] = elapsed_time
       event[@unique_id_field] = unique_id
       event[TIMESTAMP_START_EVENT_FIELD] = timestamp_start_event
+	  event[TIMESTAMP_END_EVENT_FIELD] = timestamp_end_event
 
       return event
   end
