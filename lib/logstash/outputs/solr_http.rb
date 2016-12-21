@@ -32,6 +32,9 @@ class LogStash::Outputs::SolrHTTP < LogStash::Outputs::Base
   # Number of events to queue up before writing to Solr
   config :flush_size, :validate => :number, :default => 100
 
+  # Make sure that documents are committed within this amount of milliseconds
+  config :commit_within, :validate => :number, :default => nil
+
   # Amount of time since the last flush before a flush is done even if
   # the number of buffered events is smaller than flush_size
   config :idle_flush_time, :validate => :number, :default => 1
@@ -72,7 +75,12 @@ class LogStash::Outputs::SolrHTTP < LogStash::Outputs::Base
         documents.push(document)
     end
 
-    @solr.add(documents)
+    if @commit_within.nil?
+      @solr.add documents
+    else
+      @solr.add documents, :add_attributes => {:commitWithin => @commit_within}
+    end
+
     rescue Exception => e
       @logger.warn("An error occurred while indexing: #{e.message}")
   end #def flush
