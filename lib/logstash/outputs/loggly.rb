@@ -30,8 +30,8 @@ class LogStash::Outputs::Loggly < LogStash::Outputs::Base
   milestone 2
 
   # The hostname to send logs to. This should target the loggly http input
-  # server which is usually "logs.loggly.com"
-  config :host, :validate => :string, :default => "logs.loggly.com"
+  # server which is usually "logs-01.loggly.com" (Gen2 account)
+  config :host, :validate => :string, :default => "logs-01.loggly.com"
 
   # The loggly http input key to send to.
   # This is usually visible in the Loggly 'Inputs' page as something like this
@@ -46,6 +46,12 @@ class LogStash::Outputs::Loggly < LogStash::Outputs::Base
 
   # Should the log action be sent over https instead of plain http
   config :proto, :validate => :string, :default => "http"
+ 
+  # Loggly Tag
+  # Tag helps you to find your logs in the Loggly dashboard easily
+  # You can make a search in Loggly using tag as "tag:logstash-contrib" 
+  # or the tag set by you in the config file
+  config :tag, :validate => :string, :default => "logstash-contrib"
 
   # Proxy Host
   config :proxy_host, :validate => :string
@@ -75,7 +81,7 @@ class LogStash::Outputs::Loggly < LogStash::Outputs::Base
     end
 
     # Send the event over http.
-    url = URI.parse("#{@proto}://#{@host}/inputs/#{event.sprintf(@key)}")
+    url = URI.parse("#{@proto}://#{@host}/inputs/#{event.sprintf(@key)}/tag/#{@tag}")
     @logger.info("Loggly URL", :url => url)
     http = Net::HTTP::Proxy(@proxy_host, @proxy_port, @proxy_user, @proxy_password.value).new(url.host, url.port)
     if url.scheme == 'https'
