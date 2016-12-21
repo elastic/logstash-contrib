@@ -141,7 +141,7 @@ class LogStash::Outputs::Riemann < LogStash::Outputs::Base
     if @map_fields == true
       @my_event = Hash.new
       map_fields(nil, event)
-      r_event.merge!(@my_event) {|key, val1, val2| val1}
+      r_event.merge!(@my_event) {|key, val1, val2| event.sprintf(val1)}
     end
     r_event[:tags] = event["tags"] if event["tags"].is_a?(Array)
     @logger.debug("Riemann event: ", :riemann_event => r_event)
