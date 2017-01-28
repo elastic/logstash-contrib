@@ -37,8 +37,6 @@ class LogStash::Inputs::WMI < LogStash::Inputs::Base
     @logger.info("Registering wmi input", :query => @query)
 
     if RUBY_PLATFORM == "java"
-      # make use of the same fix used for the eventlog input
-      require "logstash/inputs/eventlog/racob_fix"
       require "jruby-win32ole"
     else
       require "win32ole"
