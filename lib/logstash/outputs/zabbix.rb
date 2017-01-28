@@ -2,6 +2,7 @@
 require "logstash/namespace"
 require "logstash/outputs/base"
 require "shellwords"
+require 'open3'
 
 # The zabbix output is used for sending item data to zabbix via the
 # zabbix_sender executable.
@@ -29,7 +30,7 @@ require "shellwords"
 #          add_tag => [ "zabbix-sender" ]
 #          add_field => [
 #            "zabbix_host", "%{source_host}",
-#            "zabbix_item", "item.key"
+#            "zabbix_item", "item.key",
 #            "send_field", "field_name"
 #          ]
 #       }
@@ -55,6 +56,10 @@ require "shellwords"
 #
 #         # specify the port to connect to (default 10051)
 #         port => "10051"
+#
+#         # specify the time stamp field (optional). 
+#         # Should be formatted in unix time.
+#         time_stamp => "tsfield"
 #
 #         # specify the path to zabbix_sender
 #         # (defaults to "/usr/local/bin/zabbix_sender")
@@ -104,21 +109,38 @@ class LogStash::Outputs::Zabbix < LogStash::Outputs::Base
       field = ["message"]
     end
 
+    time_stamp = Array(event["time_stamp"])
+    if time_stamp.empty?
+       time_stamp = Nil
+    end
+
     item.each_with_index do |key, index|
 
       if field[index].nil? || (zmsg = event[field[index]]).nil?
         @logger.warn("No zabbix message to send in event field #{field[index].inspect}", :field => field, :index => index, :event => event)
         next
       end
-
-      cmd = [@zabbix_sender, "-z", @host, "-p", @port, "-s", host[index].to_s, "-k", item[index].to_s, "-o", zmsg.to_s, "-v"]
+      if time_stamp.nill?
+         cmd = [@zabbix_sender, "-z", @host, "-p", @port, "-s", host[index].to_s, "-k", item[index].to_s, "-o", zmsg.to_s, "-v"]
+      else
+	 cmd = @zabbix_sender+" -z "+@host+" -p "+@port.to_s+" -T -i -"
+      end
 
       @logger.debug("Running zabbix command", :command => cmd.join(" "))
 
       begin
-        f = IO.popen(cmd, "r")
+	if !time_stamp.nill? 
+	    eventdata = host[index].to_s+" "+item[index].to_s+" "+time_stamp.to_s+" "+zmsg.to_s 
+            Open3.popen(cmd) do |stdin, stdout, stderr, wait_thr|
+		    stdin.write eventdata
+		    stdin.close
+		    command_output = stdout.read
+	    end
+	else
+            f = IO.popen(cmd, "r")
+            command_output = f.gets
+	end
 
-        command_output = f.gets
         command_processed = command_output[/processed: (\d+)/, 1]
         command_failed = command_output[/failed: (\d+)/, 1]
         command_total = command_output[/total: (\d+)/, 1]
