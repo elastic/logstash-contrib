@@ -503,7 +503,7 @@ class LogStash::Outputs::GoogleBigQuery < LogStash::Outputs::Base
       table_id = @table_prefix + "_" + get_date_pattern(filename)
       # BQ does not accept anything other than alphanumeric and _
       # Ref: https://developers.google.com/bigquery/browser-tool-quickstart?hl=en
-      table_id = table_id.gsub!(':','_').gsub!('-', '_')
+      table_id = table_id.gsub(':','_').gsub('-', '_')
 
       @logger.debug("BQ: upload object.",
                     :filename => filename,
