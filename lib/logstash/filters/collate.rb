@@ -60,7 +60,7 @@ class LogStash::Filters::Collate < LogStash::Filters::Base
     end
 
     # if the event is collated, a "collated" tag will be marked, so for those uncollated event, cancel them first.
-    if event["tags"].nil? || !event.tags.include?("collated")
+    if event["tags"].nil? || !event["tags"].include?("collated")
       event.cancel
     else
       return
@@ -103,6 +103,7 @@ class LogStash::Filters::Collate < LogStash::Filters::Base
     if (@collatingDone)
       @mutex.synchronize{
         while collatedEvent = @collatingArray.pop
+          collatedEvent["tags"] = Array.new if collatedEvent["tags"].nil?
           collatedEvent["tags"] << "collated"
           events << collatedEvent
         end # while @collatingArray.pop
