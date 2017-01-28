@@ -6,7 +6,7 @@ require 'pp'
 
 class LogStash::Inputs::Stomp < LogStash::Inputs::Base
   config_name "stomp"
-  milestone 2
+  milestone 3
 
   default :codec, "plain"
 
@@ -32,6 +32,9 @@ class LogStash::Inputs::Stomp < LogStash::Inputs::Base
 
   # Enable debugging output?
   config :debug, :validate => :boolean, :default => false
+
+  # Add headers as event fields
+  config :headers, :validate => :array, :default => []
 
   private
   def connect
@@ -61,10 +64,18 @@ class LogStash::Inputs::Stomp < LogStash::Inputs::Base
   end # def register
 
   private
+  def add_headers event, msg
+    @headers.each do |header|
+      event[header] = msg[header] if(msg[header])
+    end    
+  end
+
+
   def subscription_handler
     @client.subscribe(@destination) do |msg|
       @codec.decode(msg.body) do |event|
         decorate(event)
+        add_headers(event, msg)
         @output_queue << event
       end
     end
